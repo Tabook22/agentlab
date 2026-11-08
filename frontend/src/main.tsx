@@ -1,3 +1,4 @@
+import { apiBase } from './apiBase';
 import { Translate, LocaleProvider, useLanguage, translateText, presetText, formatDateTime, formatTime, flowLabels } from './i18n';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -37,7 +38,7 @@ const examples = [
   { id:'failure', icon:ShieldCheck, title:'The recovery challenge', subtitle:'Watch a team handle a simulated timeout', prompt:'Demonstrate a simulated weather API timeout and safe retry.', color:'amber' },
 ];
 async function api(path: string, options?: RequestInit) {
-  const res = await fetch('/api' + path, options);
+  const res = await fetch(apiBase + path, options);
   if (!res.ok) { const body = await res.json().catch(() => ({})); throw new Error(typeof body.detail === 'string' ? body.detail : `Request failed (${res.status})`); }
   return res.json();
 }
@@ -118,7 +119,7 @@ function App() {
 
   function watchMission(id:string,after=0) {
       source.current?.close();setConnection('connecting');
-      const stream = new EventSource(`/api/missions/${id}/stream?after=${after}`);
+      const stream = new EventSource(`${apiBase}/missions/${id}/stream?after=${after}`);
       source.current = stream;
       stream.onmessage = message => {
         const event = JSON.parse(message.data) as LabEvent;

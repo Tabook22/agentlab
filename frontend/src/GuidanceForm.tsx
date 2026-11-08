@@ -1,3 +1,4 @@
+import { apiBase } from './apiBase';
 import { HelpButton } from './Help';
 import { Translate } from './i18n';
 import { useState } from 'react';
@@ -6,7 +7,7 @@ export function GuidanceForm({missionId,agentId}:{missionId:string;agentId:strin
   async function send(){
     setBusy(true);setMessage('');
     try {
-      const res=await fetch(`/api/missions/${missionId}/agents/${agentId}/guidance`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({instruction:text})});
+      const res=await fetch(`${apiBase}/missions/${missionId}/agents/${agentId}/guidance`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({instruction:text})});
       const result=await res.json();if(!res.ok)throw new Error(typeof result.detail==='string'?result.detail:'Guidance was not recorded.');
       setText('');setMessage(result.summary);
     }catch(error:any){setMessage(error.message);}finally{setBusy(false);}

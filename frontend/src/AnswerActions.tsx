@@ -1,3 +1,4 @@
+import { apiBase } from './apiBase';
 import {useEffect,useRef,useState} from 'react';
 import {Check,Clipboard,Download,FileText,FileType2,LoaderCircle,RotateCcw,Sparkles,X} from 'lucide-react';
 import {useLanguage} from './i18n';
@@ -8,7 +9,7 @@ export function AnswerActions({missionId}:{missionId:string}){
  const {language}=useLanguage(),ar=language==='ar';
  const [data,setData]=useState<AnswerPackage|null>(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(''),[prompt,setPrompt]=useState<string|null>(null),[manual,setManual]=useState<string|null>(null);
  const manualRef=useRef<HTMLTextAreaElement>(null),editorRef=useRef<HTMLTextAreaElement>(null),mounted=useRef(true);
- useEffect(()=>{mounted.current=true;let alive=true;fetch(`/api/missions/${missionId}/answer/package`).then(async response=>{const body=await response.json();if(!response.ok)throw Error(body.detail||'The approved answer is unavailable.');if(alive)setData(body);}).catch(cause=>{if(alive)setError(cause.message);});return()=>{alive=false;mounted.current=false;};},[missionId]);
+ useEffect(()=>{mounted.current=true;let alive=true;fetch(`${apiBase}/missions/${missionId}/answer/package`).then(async response=>{const body=await response.json();if(!response.ok)throw Error(body.detail||'The approved answer is unavailable.');if(alive)setData(body);}).catch(cause=>{if(alive)setError(cause.message);});return()=>{alive=false;mounted.current=false;};},[missionId]);
  useEffect(()=>{if(manual!==null){manualRef.current?.focus();manualRef.current?.select();}},[manual]);
  useEffect(()=>{if(prompt!==null)editorRef.current?.focus();},[prompt===null]);
  async function copy(text:string,rich=false){
@@ -28,7 +29,7 @@ export function AnswerActions({missionId}:{missionId:string}){
  async function download(format:'pdf'|'docx',variant:'answer'|'prompt'){
   setBusy(`${variant}-${format}`);setError('');setNotice('');
   try{
-   const response=await fetch(`/api/missions/${missionId}/answer/export`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({format,variant,...(variant==='prompt'?{prompt_text:prompt}:{})})});
+   const response=await fetch(`${apiBase}/missions/${missionId}/answer/export`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({format,variant,...(variant==='prompt'?{prompt_text:prompt}:{})})});
    if(!response.ok){const body=await response.json();throw Error(body.detail||'Could not export the document.');}
    const blob=await response.blob(),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;const fileTitle=(data?.title||'mission').replace(/[^\p{L}\p{N}-]+/gu,'-').replace(/^-+|-+$/g,'').slice(0,70);a.download=`${fileTitle||'mission'}-${variant}.${format}`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
    if(mounted.current)setNotice(ar?'تم تجهيز الملف وتنزيله.':'Your document has been downloaded.');

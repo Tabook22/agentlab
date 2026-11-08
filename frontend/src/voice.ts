@@ -1,3 +1,4 @@
+import { apiBase } from './apiBase';
 export const MAX_RECORDING_SECONDS=120;
 export const MAX_AUDIO_BYTES=10*1024*1024;
 export const MISSION_LIMIT=2000;
@@ -61,7 +62,7 @@ export class VoiceCapture {
 }
 
 export async function transcribeVoice(blob:Blob,language:string,signal:AbortSignal){
-  const response=await fetch(`/api/voice/transcribe?language=${encodeURIComponent(language)}`,{
+  const response=await fetch(`${apiBase}/voice/transcribe?language=${encodeURIComponent(language)}`,{
     method:'POST',headers:{'Content-Type':blob.type,'X-Voice-Input':'mission-composer'},body:blob,signal,
   });
   const body=await response.json().catch(()=>({}));

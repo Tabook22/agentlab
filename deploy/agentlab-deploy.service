@@ -1,0 +1,7 @@
+[Unit]
+Description=Deploy Agent Lab from GitHub main
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash %h/apps/agentlab/deploy.sh
+TimeoutStartSec=15min

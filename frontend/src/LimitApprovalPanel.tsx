@@ -1,3 +1,4 @@
+import { apiBase } from './apiBase';
 import {useEffect,useState} from 'react';
 import {Play,RefreshCw} from 'lucide-react';
 import {Translate} from './i18n';
@@ -5,12 +6,12 @@ import './limits.css';
 type State={mission_status:string;open_ended:boolean;usage:{estimated_cost_usd?:number;calls?:number;reported_tokens?:number}};
 export function LimitApprovalPanel({missionId,onChange}:{missionId:string;onChange:(result:any)=>Promise<void>}){
  const [data,setData]=useState<State|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
- async function load(){const response=await fetch(`/api/missions/${missionId}/limits`);const body=await response.json();if(!response.ok)throw new Error(body.detail||'Could not load mission status.');setData(body);return body as State;}
+ async function load(){const response=await fetch(`${apiBase}/missions/${missionId}/limits`);const body=await response.json();if(!response.ok)throw new Error(body.detail||'Could not load mission status.');setData(body);return body as State;}
  useEffect(()=>{void load().catch(cause=>setError(cause.message));},[missionId]);
  async function continueMission(){
   setBusy(true);setError('');
   try{const current=await load();if(!['FAILED','AWAITING_LIMIT_APPROVAL','PAUSED'].includes(current.mission_status)){await onChange({resumed:false});return;}
-   const response=await fetch(`/api/missions/${missionId}/execution/open`,{method:'POST'});const result=await response.json();if(!response.ok)throw new Error(result.detail||'Could not continue the mission.');await onChange(result);
+   const response=await fetch(`${apiBase}/missions/${missionId}/execution/open`,{method:'POST'});const result=await response.json();if(!response.ok)throw new Error(result.detail||'Could not continue the mission.');await onChange(result);
   }catch(cause){setError(cause instanceof Error?cause.message:'Could not continue the mission.');}finally{setBusy(false);}
  }
  return <Translate><section id="mission-limit-approval" className="limit-approval open-execution" aria-label="Continue saved mission">

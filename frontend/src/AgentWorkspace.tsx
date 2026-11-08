@@ -1,3 +1,4 @@
+import { apiBase } from './apiBase';
 import {useEffect,useId,useState,type CSSProperties} from 'react';
 import {ArrowRight,CheckCircle2,ChevronLeft,ChevronRight,FileText,MessageSquare,Pause,Play,RotateCcw,Send,Users} from 'lucide-react';
 import type {LabEvent} from './events';
@@ -16,7 +17,7 @@ function AnswerQuestion({question,onAnswered}:{question:LabEvent;onAnswered?:()=
  async function send(){
   setBusy(true);setMessage('');
   try{
-   const response=await fetch(`/api/missions/${question.mission_id}/questions/${question.id}/answer`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({instruction:answer})});
+   const response=await fetch(`${apiBase}/missions/${question.mission_id}/questions/${question.id}/answer`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({instruction:answer})});
    const body=await response.json();if(!response.ok)throw Error(typeof body.detail==='string'?body.detail:'Could not save your answer.');
    setSaved(true);setMessage(ar?'حُفظت الإجابة. تابع المهمة من أدوات المتابعة.':'Answer saved. Use recovery controls to continue the mission.');
    await onAnswered?.();

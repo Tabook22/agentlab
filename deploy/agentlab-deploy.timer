@@ -1,0 +1,10 @@
+[Unit]
+Description=Check GitHub for Agent Lab releases
+
+[Timer]
+OnStartupSec=2min
+OnUnitInactiveSec=2min
+Unit=agentlab-deploy.service
+
+[Install]
+WantedBy=timers.target

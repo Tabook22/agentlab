@@ -1,10 +1,11 @@
+import { apiBase } from './apiBase';
 import { Translate } from './i18n';
 import { useEffect, useState } from 'react';
 type BudgetRequest={id:string;status:string;current_limit_usd:number;requested_limit_usd:number;minimum_required_usd:number;estimate_available?:boolean;reason:string};
 type BudgetState={current_limit_usd:number;max_allowed_usd:number;usage:{estimated_cost_usd?:number};requests:BudgetRequest[];resume_blockers:string[]};
 export function BudgetApprovalPanel({missionId,onChange}:{missionId:string;onChange:(result:any)=>Promise<void>}) {
   const [data,setData]=useState<BudgetState|null>(null),[amount,setAmount]=useState(''),[resume,setResume]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
-  async function api(path:string,body?:any){const response=await fetch(`/api/missions/${missionId}/budget${path}`,body===undefined?undefined:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const result=await response.json();if(!response.ok)throw new Error(typeof result.detail==='string'?result.detail:'The budget request could not be processed.');return result;}
+  async function api(path:string,body?:any){const response=await fetch(`${apiBase}/missions/${missionId}/budget${path}`,body===undefined?undefined:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});const result=await response.json();if(!response.ok)throw new Error(typeof result.detail==='string'?result.detail:'The budget request could not be processed.');return result;}
   async function load(){const result=await api('') as BudgetState;setData(result);const pending=result.requests.find(r=>r.status==='pending');setAmount(String(pending?.requested_limit_usd||Math.min(result.current_limit_usd*2,result.max_allowed_usd)));setResume(!result.resume_blockers.length);}
   useEffect(()=>{load().catch(e=>setError(e.message));},[missionId]);
   async function act(action:'request'|'approve'|'deny'){
