@@ -1,0 +1,748 @@
+0: Omani Plant Recognition
+Student Training Guide
+1: A practical final year student guide
+2: Fine tuning a vision language model with Unsloth on RunPod
+3: 
+4: This guide teaches you how to prepare plant photographs and reference documents, adapt an existing open weight model, measure its performance, and connect it to an application. You rent cloud GPU time because a student laptop may not have enough memory for training. Later, the system can move to suitable locally controlled hardware.
+5: The recommended first project covers 10 to 20 selected Omani plant species. It suggests possible identities from photographs and answers questions using approved references. It does not claim to identify every plant in Oman.
+6: Audience: final year computing students with basic Python knowledge.
+7: Edition: 30 October 2026. Technical interfaces and package versions can change.
+8: Learning outcome: produce a reproducible prototype and evidence showing whether fine tuning improves plant recognition.
+9: 
+10: Introduction
+11: This practical guide helps final year students build an assistant that suggests the identity of selected Omani plants from photographs. It explains the complete process in simple English, from collecting verified data to fine tuning Qwen3 VL 2B Instruct with Unsloth on a RunPod GPU Pod, evaluating the results, and preparing an application.
+12: Students do not need to purchase a GPU server to complete the cloud prototype. A future local deployment requires suitable hardware and its own performance tests. The main academic task is to demonstrate whether training improves recognition using independent test photographs.
+13: How to use this guide
+14: Read the chapters in order. Each chapter explains the purpose, practical actions, and a checkpoint. Complete the data checks before renting a GPU, run a short training test before a longer session, and save evidence at every milestone. Code examples are instructional templates and have not been GPU tested in this document.
+15: Table of contents
+16: 
+17: Introduction	2
+18: Visual roadmap	4
+19: Reading map and milestones	5
+20: 1 Understand the system and its limits	6
+21: 2 Plan the project and resources	8
+22: 3 Choose the starting model	9
+23: 4 Collect reliable plant photographs	10
+24: 5 Prepare PDFs and plant records	12
+25: 6 Build JSONL datasets and split them fairly	13
+26: 7 Create a RunPod training environment	15
+27: 8 Validate the data and load images	16
+28: 9 Load the model and record the baseline	18
+29: 10 Fine tune with QLoRA	21
+30: 11 Save and reload the model	25
+31: 12 Evaluate the results	26
+32: 13 Add document retrieval	28
+33: 14 Build the application and deploy	30
+34: 15 Move to local hardware	32
+35: 16 Control spending and troubleshoot	34
+36: 17 Complete the project report	35
+37: 18 References and further reading	36
+38: Glossary and final student checklist	37
+39: Visual roadmap of the complete project
+40: 
+41: Figure 1  Follow the eight stages from a focused idea to a tested application.
+42: Discuss and try
+43: Trace the route with your partner. Mark the stages you can complete on a laptop and circle the stage that needs a rented GPU.
+44: Write your first milestone and the evidence that will prove it is complete.
+45: Student notes   __________________________________________________________
+46: ________________________________________________________________________
+47: 
+48: Reading map and project milestones
+49: Follow the chapters in order. Complete each checkpoint before renting more GPU time. Code is provided as notebook cells or small scripts; copy it into files rather than typing commands from screenshots. Nine visual learning pages explain key steps. Use their discussion prompts and student notes during practical sessions; the Word drawings are static, not animated.
+50: 1. Understand the system and its limits
+51: 2. Plan the project and resources
+52: 3. Choose the starting model
+53: 4. Collect reliable photographs
+54: 5. Prepare PDFs and plant records
+55: 6. Build JSONL datasets and split them fairly
+56: 7. Create a RunPod training environment
+57: 8. Validate the data and load images
+58: 9. Load the model and record the baseline
+59: 10. Fine tune with QLoRA
+60: 11. Save and reload the model
+61: 12. Evaluate the results
+62: 13. Add document retrieval
+63: 14. Build the application and deploy
+64: 15. Move to local hardware
+65: 16. Control spending and troubleshoot
+66: 17. Complete the project report
+67: 18. References and glossary
+68: The code is an educational implementation template based on the documented Unsloth vision workflow. It has not been GPU trained or benchmarked for this guide. Students must run the smoke test, check their installed APIs against the official notebook, and record the environment that actually works. No accuracy, runtime, or cost results are claimed.
+69: Milestone A: approved species list, data permissions, and project questions.
+70: Milestone B: verified images, species catalogue, and locked data splits.
+71: Milestone C: original model baseline and successful short training test.
+72: Milestone D: evaluated adapter and working photo upload demonstration.
+73: Milestone E: reproducible handover package and honest final report.
+74: 
+75: 1 Understand the system and its limits
+76: 1 1 What you are building
+77: A large language model or LLM primarily processes language. A vision language model or VLM processes images and language. Your photo recognition project therefore needs a VLM or a separate image recognition model. The text only Qwen2.5 7B and Llama 3.1 8B models cannot accept photos merely because you train them on plant descriptions.
+78: You will adapt an existing VLM rather than create a foundation model from zero. In this guide, starting model means the pretrained model you adapt. An instruction tuned starting model already follows conversational instructions. A raw base model may require additional instruction training.
+79: 1.2 Where each part runs
+80: 
+81: Cloud training and cloud inference are different activities. Training changes model parameters. Inference uses the finished model to answer a request. Use a Pod for training. Serverless is optional for serving requests after the model works.
+82: 1.3 What specialization can and cannot do
+83: Fine tuning may improve recognition of the selected species and produce more consistent answers. It does not guarantee correct identification, exhaustive factual memory, or calibrated confidence. Closely related plants may require flowers, fruit, location, or specialist examination.
+84: The app should return a suggested identity, visible features, limitations, and a request for additional photographs when needed. Never present a generated confidence percentage as a measured probability. Do not infer edibility or medicinal safety from the photo.
+85: Checkpoint: explain to your supervisor why your project uses a VLM and what counts as a successful identification.
+86: 
+87: Visual map of the laptop and cloud roles
+88: 
+89: Figure 2  Training and serving are separate jobs. Cloud processing can sit behind a local app.
+90: Discuss and try
+91: Point to the component that changes model parameters. Then point to the component that answers a photo request.
+92: Explain which files or images leave the laptop during your prototype.
+93: Student notes   __________________________________________________________
+94: ________________________________________________________________________
+95: 
+96: 2 Plan the project and resources
+97: 2 1 Define a manageable scope
+98: Begin by selecting 10 to 20 Omani plant species with help from a botanical adviser or plant specialist. Choose species for which you can collect photographs with verified identifications. Include photographs of different individual plants, taken from different angles and under different lighting and background conditions. Where possible, capture the whole plant as well as its leaves, flowers, fruits, or bark.
+99: Include some visually similar species to test whether the model can distinguish between plants that look alike. Keep the project’s scope realistic: a model trained on a small selection of species should be evaluated on those species, rather than presented as capable of recognizing every plant in Oman.
+100: For this project, students will fine-tune Qwen3-VL-2B-Instruct, an existing open-weight vision-language model (VLM) that accepts images and text. The original model already has general image-understanding abilities. Fine-tuning uses verified plant photographs and answers to adapt it to the selected Omani species.
+101: The training method is QLoRA, which stands for Quantized Low-Rank Adaptation. QLoRA reduces training memory requirements by loading the original model in a compressed numerical form and training small additional parameters called adapters, while keeping the original model’s main weights frozen. QLoRA is the training method; the resulting system is called a fine-tuned VLM.
+102: The research question is:
+103: Does fine-tuning Qwen3-VL-2B-Instruct using QLoRA improve its ability to identify selected Omani plant species in new photographs, compared with the same model before fine-tuning?
+104: In simple words: Does teaching the model with our plant photographs help it recognize plants more accurately in photographs it has never seen before?
+105: To answer this question fairly, test both versions—the original model and the model with the trained adapter  on the same photographs excluded from training. These should show different individual plants from those used in training. Keep the prompts, image processing, and other test settings consistent. Compare the results to determine whether fine-tuning improved identification, which species remain difficult, and when the model should request another photograph instead of guessing.
+106: 
+107: 
+108: 
+109: 
+110: 
+111: 
+112: A second research question can ask whether retrieval improves the accuracy and traceability of factual plant descriptions. Keep recognition accuracy and factual answering accuracy as separate measurements.
+113: 2 2 Suggested starting resources
+114: 
+115: These are project planning estimates, not hardware guarantees. Image resolution, number of images per example, optimizer, sequence length, and model configuration change GPU memory requirements. A larger model may require a larger GPU. Select a supported CUDA environment before paying for a long session.
+116: 2 3 Suggested eight week schedule
+117: 
+118: Checkpoint: supervisor approves scope, maximum spending, and measurable assessment criteria.
+119: 
+120: 3 Choose the starting model
+121: 3 1 Recommended first candidate
+122: Use Qwen/Qwen3-VL-2B-Instruct from its official Hugging Face repository. The official model card identifies it as an image and text model and lists the Apache 2.0 license [1]. The 2B size is a practical starting candidate for a student experiment; its suitability for Omani plants must be measured.
+123: Download page:
+124: https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct
+125: Unsloth documents Qwen3 VL training support and a vision notebook workflow [2, 3]. The published notebook may default to an 8B checkpoint. Change the model deliberately to your selected 2B candidate and run a short compatibility test. Do not assume hardware needs remain the same across sizes.
+126: 3 2 Which files to use
+127: Use a supported Hugging Face Transformers checkpoint or the matching Unsloth training checkpoint. Keep its processor, tokenizer, configuration, and chat template together. The processor prepares images as well as text.
+128: A GGUF intended for an inference engine is not the starting checkpoint for the Unsloth training workflow in this guide. Export to a compatible deployment format only after training and checking vision support.
+129: 3 3 Record the exact experiment
+130: Keep the repository ID, resolved model commit or revision, download date, package versions, GPU type, and image preprocessing settings. Model names alone do not fully reproduce an experiment. For the final run, use a pinned revision or a downloaded snapshot whose identity is recorded.
+131: A free model means its weights can be obtained under its license. It does not mean free GPU rental, free storage, or free hosted API calls. Model licenses and your photograph or document permissions are separate matters.
+132: 3 4 A useful comparison
+133: If time allows, compare the VLM with a conventional image classifier trained on the same species and split. A smaller classifier may be cheaper to run. Use the same test images and disclose differences in training data; do not assume the VLM must win.
+134: Checkpoint: original model loads and answers a general image question before any custom training begins.
+135: 
+136: 4 Collect reliable plant photographs
+137: 4 1 Build a species catalogue first
+138: Assign each species a stable ID such as OM001. Maintain an accepted scientific name, family, verified local names, synonyms, and supporting references. A local name may refer to more than one species. The catalogue should preserve this ambiguity rather than silently merge plants.
+139: A botanist or qualified adviser should verify labels. Uncertain labels belong in a review queue. A model prediction or an internet filename is not sufficient ground truth.
+140: 4 2 Photograph diversity matters
+141: Collect whole plant, leaf, flower, fruit, and bark views where appropriate. Include different individual plants, locations, seasons, lighting, distances, cameras, and backgrounds. Keep contextual metadata, but do not put exact sensitive locations into a public app.
+142: As an initial collection target, consider 50 to 100 independent photographs per species from many individual plants. This is an illustrative pilot target, not an established minimum or a guarantee of success. More duplicate images of the same plant cannot replace independent examples.
+143: Do not photograph one species only against a classroom wall and another only outdoors. The model may learn the backgrounds. Avoid name labels, watermarks that reveal species, or captions inside the training image that give away the answer.
+144: 4 3 Include difficult and unsupported cases
+145: Add examples with blur, missing identifying parts, multiple plants, and species outside your supported list. Label genuinely ambiguous cases as uncertain. Unsupported species must not be forced into one of the known labels.
+146: Do not use generated plant images as ground truth for scientific identification. Keep rights and attribution records for every external image. A picture on a public website is not automatically available for training or redistribution.
+147: 4 4 Quality review checklist
+148: The scientific species label has been checked.
+149: The photographed individual has a specimen or group ID.
+150: The photo is clear enough for its intended task.
+151: Photographer, permission, date, and view are recorded.
+152: Duplicate and near duplicate images have been reviewed.
+153: The image has no answer revealing label or unwanted personal information.
+154: Checkpoint: review a contact sheet of each species with your adviser before training.
+155: 
+156: Visual guide to collecting useful photographs
+157: 
+158: Figure 3  Collect varied views from independent plants. The sketches are generic collection aids.
+159: Discuss and try
+160: Choose one species and plan a whole plant photo, a close detail, and another independent individual.
+161: Ask a botanical reviewer which visible parts are needed to distinguish your selected species.
+162: Student notes   __________________________________________________________
+163: ________________________________________________________________________
+164: 
+165: 5 Prepare PDFs and plant records
+166: 5 1 Give PDFs and images different jobs
+167: PDFs provide factual knowledge, taxonomic descriptions, and reference material. Verified photographs provide visual recognition examples. A PDF may contain useful plant photos, but each extracted image needs its own correct caption, species label, page reference, and rights check. Illustrations and herbarium scans may differ greatly from phone photos.
+168: Preserve the original files. For scanned pages, apply OCR, then manually check scientific names, Arabic letter order, units, and table reading order. Do not assume a successful text extraction means the content is correct.
+169: 5 2 Simple extraction example
+170: Run this on your laptop in a project environment. It extracts selectable PDF text; it is not OCR. Install PyMuPDF in that environment first.
+171: from pathlib import Path
+172: import json
+173: import fitz
+174: 
+175: source = Path("data/pdfs")
+176: target = Path("data/reference_passages.jsonl")
+177: target.parent.mkdir(parents=True, exist_ok=True)
+178: with target.open("w", encoding="utf-8") as out:
+179:     for path in sorted(source.glob("*.pdf")):
+180:         with fitz.open(path) as pdf:
+181:             for page_no, page in enumerate(pdf, 1):
+182:                 record = {
+183:                     "document": path.name,
+184:                     "pdf_page": page_no,
+185:                     "text": page.get_text("text").strip()
+186:                 }
+187:                 out.write(json.dumps(record,
+188:                     ensure_ascii=False) + "\n")
+189: 
+190: Inspect the output alongside the original pages. Empty or scrambled pages require another extraction method or OCR. Record both PDF page index and printed page number when they differ.
+191: 5 3 Build a plant knowledge record
+192: For each species, store verified habitat, Oman distribution, synonyms, and source passages. Distinguish an observation in one location from evidence that a plant grows throughout Oman. Record disagreements between references and have your adviser resolve them.
+193: Keep these records for retrieval. Do not teach the vision model to infer medicinal properties, conservation status, or geographic distribution from pixels alone. Those facts need documentary support.
+194: Checkpoint: a student can trace every knowledge statement to a document and page.
+195: 
+196: 6 Build JSONL datasets and split them fairly
+197: 6 1 What JSONL means
+198: JSONL stores one complete JSON object per line. It is a container for records, not a training method. Image paths in JSONL must point to actual accessible image files. The loader later opens those files and supplies pixels to the model.
+199: Use this schema for your master manifest. Values below are placeholders, not botanical facts. Replace them before training.
+200: {
+201:   "id": "img001",
+202:   "image": "images/OM001_001.jpg",
+203:   "species_id": "OM001",
+204:   "scientific_name": "REPLACE_VERIFIED_NAME",
+205:   "group_id": "specimen_001",
+206:   "question": "Suggest the species and describe visible features.",
+207:   "answer": "REPLACE_WITH_VERIFIED_ANSWER",
+208:   "source": "REPLACE_REFERENCE",
+209:   "reviewer": "REPLACE_REVIEWER",
+210:   "license": "REPLACE_PERMISSION"
+211: }
+212: 
+213: Keep the real record on one line. Use UTF 8 so Arabic and scientific names are preserved. Store metadata outside the conversation; do not accidentally include the species label, image filename, or answer in the user prompt.
+214: 6 2 Write useful answers
+215: An answer should identify the supported species when justified and mention visible distinguishing features. Do not describe flowers if the photograph only shows bark. For an insufficient photo, explain what is missing and ask for a closer leaf or flower image.
+216: Begin with image plus question examples. Adding text only training to a multimodal pipeline requires loader and collator support; treat that as a later controlled experiment. Use RAG first for detailed document knowledge.
+217: 6 3 Prevent data leakage
+218: A suggested split is 70 percent training, 15 percent validation, and 15 percent test, measured approximately by independent groups. Keep all views of the same individual plant, burst sequence, crop, and augmented copy in one split. Resolve duplicates across sources before splitting.
+219: Every supported species should have independent groups represented in all three sets. If there are too few groups, collect more data or reduce scope. Do not solve the problem by placing near duplicates into the test set. GroupShuffleSplit is one documented tool for separating related samples [8].
+220: For recognition tests, hold out new individuals of known species. A separate test on entirely new species measures unknown species handling. For factual questions, split related passages before generating questions, so paraphrases do not leak across sets.
+221: Checkpoint: save train.jsonl, val.jsonl, and test.jsonl plus the split seed and group membership. Freeze test data.
+222: 
+223: Visual guide to fair dataset splits
+224: 
+225: Figure 4  Group related photographs before dividing the data. The percentages are planning suggestions.
+226: Discuss and try
+227: You have five photos and two crops of the same plant. Decide together where all seven files must go.
+228: Check one species in your manifest and count independent groups in train, validation and test.
+229: Student notes   __________________________________________________________
+230: ________________________________________________________________________
+231: 
+232: 7 Create a RunPod training environment
+233: 7 1 Prepare before the paid session
+234: Finish the dataset, scripts, species catalogue, and a written experiment plan on the laptop. Estimate storage from model downloads, images, checkpoints, and caches. Confirm the current GPU hourly rate and storage charges in your account; this guide does not quote live prices.
+235: RunPod supplies GPU compute. Unsloth is the training software. Your model and dataset are inputs. A Pod is a rented environment you control; Serverless workers are an optional serving stage after training.
+236: 7 2 Deploy the Pod
+237: 1. Create or sign in to RunPod and set a small project budget.
+238: 2. Open Pods and choose Deploy. Select one suitable GPU and a CUDA compatible template [5].
+239: 3. Prefer the official Unsloth container where supported by the platform. Unsloth publishes the image name unsloth/unsloth [4]. Record the selected tag or digest; verify its current startup instructions rather than guessing ports.
+240: 4. Attach persistent storage. Put datasets, adapters, checkpoints, and model caches under its actual mount path.
+241: 5. Start the Pod and open the provided Jupyter or terminal connection. Keep authentication enabled.
+242: 6. Upload your project using Jupyter, SCP using RunPod's displayed SSH details, or an approved transfer method.
+243: 7 3 Understand storage before stopping
+244: Container disk is temporary. A Pod volume disk normally retains files across stops but is deleted when that Pod is terminated. A network volume persists independently of the Pod [6]. Network volume attachment can constrain placement and stop behavior; inspect the current console options for your configuration.
+245: Do not treat a mounted volume as your only backup. Download your valuable outputs before ending a session or terminating a Pod. Storage may continue billing after compute stops.
+246: 7 4 Create the project folders
+247: Run in the Pod terminal. Confirm that /workspace is the attached persistent path first.
+248: mkdir -p /workspace/oman_plants/data/images
+249: mkdir -p /workspace/oman_plants/outputs
+250: mkdir -p /workspace/oman_plants/results
+251: mkdir -p /workspace/oman_plants/hf_cache
+252: nvidia-smi
+253: 
+254: Expected result: the GPU is listed, project files are present, and persistent storage has enough free space.
+255: 
+256: 8 Validate the data and load images
+257: 8 1 Confirm the environment
+258: Start with the installation cells in the current official Unsloth Qwen3 VL notebook [3]. In a compatible non Colab environment, its basic installation route uses pip install unsloth. A working official container may already include it. Avoid replacing CUDA or PyTorch randomly in a prebuilt environment.
+259: Install small supporting packages if missing, using the notebook kernel's interpreter. Restart the kernel if package installation requires it. Run the GPU and import checks before downloading large models.
+260: import os
+261: os.environ["HF_HOME"] = "/workspace/oman_plants/hf_cache"
+262: from unsloth import FastVisionModel
+263: import torch
+264: from pathlib import Path
+265: import json
+266: from PIL import Image, ImageOps
+267: ROOT = Path("/workspace/oman_plants")
+268: assert torch.cuda.is_available(), "GPU is not visible"
+269: print(torch.cuda.get_device_name(0))
+270: 
+271: 8 2 Open and check the records
+272: Run this after uploading the manifests and images. All image paths are relative to the data folder. For a modest pilot, in memory image loading is simpler; large datasets need a lazy loader.
+273: def read_rows(name):
+274:     path = ROOT / "data" / name
+275:     rows = [json.loads(line) for line in
+276:             path.read_text(encoding="utf-8").splitlines()
+277:             if line.strip()]
+278:     assert rows, f"Empty dataset: {name}"
+279:     for row in rows:
+280:         for key in ("id", "image", "group_id",
+281:                     "question", "answer", "species_id"):
+282:             assert row.get(key), (name, key)
+283:         assert "REPLACE" not in row["answer"]
+284:         with Image.open(ROOT / "data" / row["image"]) as im:
+285:             im.verify()
+286:     return rows
+287: train_rows = read_rows("train.jsonl")
+288: val_rows = read_rows("val.jsonl")
+289: test_rows = read_rows("test.jsonl")
+290: groups = lambda rows: {r["group_id"] for r in rows}
+291: assert not groups(train_rows) & groups(val_rows)
+292: assert not groups(train_rows) & groups(test_rows)
+293: assert not groups(val_rows) & groups(test_rows)
+294: 
+295: These checks find missing files and overlapping group IDs. They do not replace expert label checks or a near duplicate audit.
+296: 8 Continued Prepare image conversations
+297: 8 3 Resize without destroying plant features
+298: Keep original photographs unchanged. Make working copies or resize in the loader. For the pilot below, a 768 pixel longest side limits memory use. It is an experimental setting, not an optimal resolution. Check that small flowers and leaf details remain visible. The model processor may perform additional resizing; record those settings too.
+299: def open_photo(row):
+300:     path = ROOT / "data" / row["image"]
+301:     with Image.open(path) as im:
+302:         image = ImageOps.exif_transpose(im).convert("RGB")
+303:     image.thumbnail((768, 768))
+304:     return image
+305: 
+306: def conversation(row):
+307:     return {"messages": [
+308:         {"role": "user", "content": [
+309:             {"type": "image", "image": open_photo(row)},
+310:             {"type": "text", "text": row["question"]}
+311:         ]},
+312:         {"role": "assistant", "content": [
+313:             {"type": "text", "text": row["answer"]}
+314:         ]}
+315:     ]}
+316: 
+317: train_data = [conversation(r) for r in train_rows]
+318: val_data = [conversation(r) for r in val_rows]
+319: print("Training examples:", len(train_data))
+320: print("Validation examples:", len(val_data))
+321: display(open_photo(train_rows[0]))
+322: print(train_rows[0]["question"])
+323: print(train_rows[0]["answer"])
+324: 
+325: 
+326: A PIL image object is created in memory; it is not saved inside the JSONL file. The vision collator later combines these images with text. Do not convert image objects to strings. Unsloth's vision training documentation explains the image conversation and collator approach [2].
+327: 8 4 Audit the learning signal
+328: Inspect at least 20 random examples and a few examples per species. Check that the assistant answer matches the visible image, not only its folder label. Include examples where the honest answer is uncertain. Generate all crops and augmentations after the split, using only their own split's originals.
+329: If a prompt supplies the correct name, that example measures description conditional on a name, not independent image identification. Keep identification prompts free of the label.
+330: Checkpoint: sample images display correctly, all examples have reviewed answers, and dataset splits are independent.
+331: 
+332: 9 Load the model and record the baseline
+333: 9 1 Load the starting checkpoint
+334: Use the same model and preprocessing for the baseline and the adapted experiment. Loading in four bit reduces model weight memory. It does not eliminate activation memory or image token costs. Downloading can take time; verify that the cache is persistent.
+335: MODEL_ID = "Qwen/Qwen3-VL-2B-Instruct"
+336: model, processor = FastVisionModel.from_pretrained(
+337:     model_name=MODEL_ID,
+338:     load_in_4bit=True,
+339:     use_gradient_checkpointing="unsloth",
+340: )
+341: 
+342: 
+343: The public checkpoint is the starting candidate. If your installed version requires the matching Unsloth checkpoint, use the one linked from the official model guide and record the change. Do not substitute a text only checkpoint with a similar name.
+344: 9 2 Define one prediction function
+345: Run this on the original model before adding LoRA. The answer is generated without the gold label. The question should be the same for the paired evaluation.
+346: def predict(row):
+347:     FastVisionModel.for_inference(model)
+348:     messages = [{"role": "user", "content": [
+349:         {"type": "image"},
+350:         {"type": "text", "text": row["question"]}
+351:     ]}]
+352:     prompt = processor.apply_chat_template(
+353:         messages, add_generation_prompt=True)
+354:     inputs = processor(open_photo(row), prompt,
+355:         add_special_tokens=False,
+356:         return_tensors="pt").to("cuda")
+357:     with torch.inference_mode():
+358:         tokens = model.generate(**inputs,
+359:             max_new_tokens=180, do_sample=False,
+360:             use_cache=True)
+361:     new_tokens = tokens[:, inputs["input_ids"].shape[1]:]
+362:     return processor.batch_decode(new_tokens,
+363:         skip_special_tokens=True)[0]
+364: 
+365: 
+366: Use deterministic decoding for paired experiments and record generation settings. This is an evaluation choice rather than a claim that it is always best for the model. For version specific processor changes, follow the corresponding official notebook [3].
+367: 
+368: 9 Continued Save baseline evidence
+369: 9 3 Use validation during development
+370: Record original model predictions on the validation set now. Develop your evaluation and parsing using validation data. Keep final test evaluation locked until you have selected the training settings.
+371: import time
+372: 
+373: def record_predictions(rows, filename):
+374:     target = ROOT / "results" / filename
+375:     with target.open("w", encoding="utf-8") as out:
+376:         for row in rows:
+377:             torch.cuda.synchronize()
+378:             started = time.perf_counter()
+379:             answer = predict(row)
+380:             torch.cuda.synchronize()
+381:             result = {
+382:                 "id": row["id"],
+383:                 "species_id": row["species_id"],
+384:                 "gold": row["answer"],
+385:                 "prediction": answer,
+386:                 "seconds": time.perf_counter() - started
+387:             }
+388:             out.write(json.dumps(result,
+389:                 ensure_ascii=False) + "\n")
+390: 
+391: record_predictions(val_rows, "baseline_val.jsonl")
+392: 
+393: 
+394: Warm up the model before collecting timing measurements you will report. Separate model generation time from upload, queue, retrieval, and network time. The example measures the prediction function, including its input preparation; describe that boundary in your report.
+395: 9 4 Save an experiment note
+396: Record the model ID and revision, processor, GPU, seed, dataset version, image size, prompt, and decoding settings. Include a few original model errors. These errors help you decide whether you lack training examples, distinguishing photographs, or correct labels.
+397: For final test comparisons, evaluate the original checkpoint in a separate clean process or environment before attaching the trained adapter. Loading two models simultaneously may exceed memory. Do not accidentally label adapter predictions as the original baseline.
+398: Checkpoint: baseline predictions are saved and your supervisor can see the starting model's strengths and failures.
+399: 
+400: Visual explanation of the model and adapter
+401: 
+402: Figure 5  QLoRA adapts a quantized starting model by learning smaller adapter parameters.
+403: Discuss and try
+404: Explain why downloading only the adapter is not enough to run your Omani plant assistant.
+405: List the model identity, processor and adapter files that your team must save.
+406: Student notes   __________________________________________________________
+407: ________________________________________________________________________
+408: 
+409: 10 Fine tune with QLoRA
+410: 10 1 Understand the method
+411: LoRA learns small trainable adapter parameters while most pretrained weights remain frozen. QLoRA combines adapter training with a quantized starting model. This reduces memory compared with updating every model weight. An adapter must later be paired with the matching starting model [7].
+412: You are still adapting visual and language behavior. Text question answering alone is not a substitute for showing labelled photographs during training.
+413: 10 2 Add the adapter
+414: Run this once after recording the baseline. If you restart the notebook, reload the original checkpoint before applying the adapter configuration again.
+415: model = FastVisionModel.get_peft_model(
+416:     model,
+417:     r=16,
+418:     lora_alpha=16,
+419:     lora_dropout=0,
+420:     bias="none",
+421:     random_state=3407,
+422:     finetune_vision_layers=True,
+423:     finetune_language_layers=True,
+424:     finetune_attention_modules=True,
+425:     finetune_mlp_modules=True,
+426: )
+427: FastVisionModel.for_training(model)
+428: model.print_trainable_parameters()
+429: 
+430: 
+431: These are starting experiment settings, not a tuned recipe for Omani plants. Adapters in selected vision and language modules can learn the task while leaving most weights frozen. Record which modules are trainable.
+432: 10 3 Understand the main settings
+433: 
+434: An epoch means one pass through the training set. Ten smoke test steps do not prove the model has learned enough. With one GPU and batch size 1, accumulation of 4 gives an effective batch of 4 examples per update, aside from a partial final batch.
+435: 
+436: 10 Continued Configure and run training
+437: 10 4 Create the trainer
+438: The following cells follow the Unsloth vision training pattern. Its official notebook is the compatibility reference [3]. If your TRL version renames tokenizer to processing_class or changes a setting, follow the pinned notebook version consistently. Do not mix installation cells from different tutorials.
+439: from unsloth.trainer import UnslothVisionDataCollator
+440: from trl import SFTConfig, SFTTrainer
+441: 
+442: SMOKE_TEST = True
+443: settings = dict(
+444:     output_dir=str(ROOT / "outputs" / "pilot"),
+445:     per_device_train_batch_size=1,
+446:     per_device_eval_batch_size=1,
+447:     gradient_accumulation_steps=4,
+448:     learning_rate=1e-4,
+449:     warmup_ratio=0.05,
+450:     logging_steps=1,
+451:     optim="adamw_8bit",
+452:     weight_decay=0.01,
+453:     seed=3407,
+454:     report_to="none",
+455:     remove_unused_columns=False,
+456:     dataset_text_field="",
+457:     dataset_kwargs={"skip_prepare_dataset": True},
+458:     max_length=2048,
+459:     eval_strategy="no" if SMOKE_TEST else "epoch",
+460:     save_strategy="no" if SMOKE_TEST else "epoch",
+461:     save_total_limit=2,
+462: )
+463: if SMOKE_TEST:
+464:     settings["max_steps"] = 10
+465: else:
+466:     settings["num_train_epochs"] = 1
+467: 
+468: collator = UnslothVisionDataCollator(model, processor)
+469: trainer = SFTTrainer(
+470:     model=model,
+471:     tokenizer=processor,
+472:     data_collator=collator,
+473:     train_dataset=train_data,
+474:     eval_dataset=val_data,
+475:     args=SFTConfig(**settings),
+476: )
+477: train_result = trainer.train()
+478: print(train_result.metrics)
+479: 
+480: 
+481: Check your processor's image token count before choosing a sequence limit. If truncation drops image tokens or the answer, reduce image resolution and prompt length, or use the notebook's supported no truncation setting. Do not silently discard identifying visual details just to make training start.
+482: 
+483: 10 Continued Run controlled experiments
+484: 10 5 Smoke test acceptance
+485: A successful smoke test means the model loads, batches contain images, gradients update, loss is finite, and an output can be saved and reloaded. It does not mean recognition is accurate.
+486: Inspect a collated batch and a decoded example. Confirm that the user question does not reveal the label and that the answer tokens are not truncated. Check the collator's loss mask against your intended objective. In particular, verify whether the installed configuration trains on assistant responses only or also on user text. Preserve its vision token handling; use the official model specific guidance for masking.
+487: If the GPU runs out of memory, stop the failed job and first lower image resolution or sequence length, keep batch size 1, and enable supported gradient checkpointing. If needed, use a smaller model. Increasing accumulation changes effective batch size but cannot fix a single example that is too large.
+488: 10 6 Start a clean full pilot
+489: After the smoke test works, restart from the original checkpoint and add a fresh adapter. Set SMOKE_TEST to False and use a new output directory. Otherwise, your pilot also includes the smoke test updates and its actual training history differs from your report.
+490: Train one epoch, evaluate validation answers, then decide whether another controlled run is justified. Change one major setting at a time. Keep a short experiment log rather than repeatedly renting GPUs without a hypothesis.
+491: 
+492: 10 7 Diagnose overfitting
+493: Training loss can fall while validation recognition gets worse. This suggests the model may be memorizing training examples or exploiting shortcuts. Try fewer epochs, better independent data, or a smaller adapter. Review labels and backgrounds before blaming model size.
+494: Checkpoint: one reproducible pilot has saved outputs, validation predictions, and a documented decision. Do not inspect the final test results to select hyperparameters.
+495: 
+496: Visual guide to the experiment loop
+497: 
+498: Figure 6  Use validation for decisions and keep the final test separate.
+499: Discuss and try
+500: A smoke test finishes without errors. Decide whether that proves recognition accuracy and explain your answer.
+501: Write one hypothesis for the next experiment and name the single setting you will change.
+502: Student notes   __________________________________________________________
+503: ________________________________________________________________________
+504: 
+505: 11 Save and reload the model
+506: 11 1 Save the adapter and processor
+507: Save to the persistent project directory after training. Keep the original starting checkpoint available separately. A PEFT checkpoint normally contains adapter weights and configuration, not the full foundation model [7].
+508: adapter_dir = ROOT / "outputs" / "oman_adapter"
+509: model.save_pretrained(str(adapter_dir))
+510: processor.save_pretrained(str(adapter_dir))
+511: trainer.save_state()
+512: trainer.save_metrics("train", train_result.metrics)
+513: 
+514: Also save your training notebook, manifests, species catalogue, preprocessing settings, logs, model revision, and environment package list. Run in the Pod terminal:
+515: python -m pip freeze > /workspace/oman_plants/requirements.lock.txt
+516: 
+517: Check that the command uses the same interpreter as the training notebook. If necessary, use that kernel's Python executable explicitly.
+518: 11 2 Test a clean reload
+519: Restart the kernel to release the previous model. Restore ROOT, imports, and prediction helpers, then load the saved adapter. A network download may still be needed if the matching foundation checkpoint is absent from the cache.
+520: model, processor = FastVisionModel.from_pretrained(
+521:     model_name=str(ROOT / "outputs" / "oman_adapter"),
+522:     load_in_4bit=True,
+523: )
+524: FastVisionModel.for_inference(model)
+525: print(predict(val_rows[0]))
+526: 
+527: 
+528: Check the adapter configuration points to the correct starting model. Preserve or pin that model's revision in your handover manifest. A successful reload should reproduce the expected validation behavior using the same input preparation.
+529: 11 3 Back up before ending the session
+530: Download the adapter folder, processor files, training configuration, results, lock file, and manifests. Keep a second copy outside the Pod. Do not publish private images or copyrighted PDFs as part of a public model repository.
+531: If you merge the adapter into a complete model, record how you merged it and check the result. Exporting or merging can require more RAM, VRAM, and disk space than adapter saving.
+532: Checkpoint: a fresh process loads the saved output and answers an image question. Only then release cloud compute.
+533: 
+534: 12 Evaluate the results
+535: 12 1 Lock the final experiment
+536: Select the model and settings using validation only. Then run the original model and selected fine tuned model on exactly the same untouched test images. Use the same questions, preprocessing, and generation settings. Keep a warmup policy and record latency measurement boundaries.
+537: A text answer is not automatically a classification label. Define a scoring rule before looking at results. Prefer one canonical scientific name or stable species ID in the output. Normalize accepted synonyms through the reviewed catalogue. Treat malformed outputs and unsupported names consistently, with a documented failure rule.
+538: 12 2 Measure more than one number
+539: 
+540: If the app offers multiple candidates, report top three accuracy separately. Do not count a long list containing the answer as top one success. Report both abstention rate and accuracy or coverage on accepted predictions, so a model cannot appear excellent by refusing almost everything.
+541: 12 3 Illustrative calculation
+542: If 80 of 100 known species test photos are correctly identified, accuracy is 80 percent. This is a teaching example, not a project result. Report the number of test examples, species counts, independent plant groups, and uncertainty around estimates. Where feasible, repeat with several seeds and summarize variation without tuning on test results.
+543: Review failures with the botanical adviser. Separate label errors, poor photographs, visually indistinguishable species, and model mistakes. Check whether correct descriptions merely repeat memorized text while naming the wrong plant.
+544: Checkpoint: your results table contains real measured values and limitations, with no invented accuracy or confidence scores.
+545: 
+546: Visual guide to recognition results
+547: 
+548: Figure 7  A confusion matrix reveals which species are mistaken for one another. All numbers are illustrative.
+549: Discuss and try
+550: Find the cell where a verified Species B was predicted as Species C. How many mistakes does it show?
+551: Calculate accuracy from the diagonal, then explain why the same number can hide different species errors.
+552: Student notes   __________________________________________________________
+553: ________________________________________________________________________
+554: 
+555: 13 Add document retrieval
+556: 13 1 Why keep RAG after fine tuning
+557: Fine tuning can improve domain behavior and knowledge, but it does not ensure exact recall or accurate page references. Retrieval augmented generation or RAG searches your document collection and gives relevant passages to the model before it answers. This grounds factual explanations in accessible evidence [9].
+558: Separate two stages in the app. First, suggest an identity from the photograph. Second, look up facts for the candidate species. If identification is uncertain, present candidate dependent information rather than silently choosing one plant and writing a confident profile.
+559: 13 2 Build the retrieval collection
+560: 1. Clean the extracted PDF text and preserve source page information.
+561: 2. Split it into coherent passages. A starting experiment might use a few hundred words with modest overlap, adjusted to the documents and languages.
+562: 3. Link passages to canonical species IDs and synonyms where possible.
+563: 4. Generate embeddings using a model evaluated for your Arabic and English texts.
+564: 5. Store vectors with text and metadata in a local index such as FAISS or a vector database.
+565: 6. Combine exact scientific name lookup with semantic retrieval, then inspect retrieved passages.
+566: Do not rely only on semantic similarity for nearly identical scientific names. Filter by verified species ID where the identification is established. Keep accepted synonyms in the catalogue.
+567: 13 3 Answer with evidence
+568: Send the question and selected passages with instructions to use only supported facts, identify missing information, and cite source labels. The application should display the actual document and page metadata from retrieved records. Verify that the cited passage supports the claim; a citation's existence does not prove correctness.
+569: Photos can support visible shape and color. Your references support habitat, distribution, historical uses, and other background facts. Do not mix these sources of evidence without explaining them to the user.
+570: 13 4 Understand the cloud boundary
+571: If retrieval runs locally but selected passages and photos go to RunPod, those items are processed in the cloud. A local interface does not make the whole system local. Use approved data for the proof of concept. A fully local system needs local model inference, retrieval, embeddings, storage, and any other essential services.
+572: Checkpoint: test questions retrieve the correct species' passages and show valid sources, including questions with no answer in the collection.
+573: 
+574: Visual guide to images and document retrieval
+575: 
+576: Figure 8  Keep visible evidence separate from facts retrieved from references.
+577: Discuss and try
+578: Take one example answer and underline photo observations. Circle facts that require a document.
+579: Design a response for a blurred photo when the reference collection contains excellent information but the identity is unclear.
+580: Student notes   __________________________________________________________
+581: ________________________________________________________________________
+582: 
+583: 14 Build the application and deploy
+584: 14 1 Minimal student application
+585: Begin with a simple interface rather than a complex mobile application. A Streamlit prototype or a small web frontend with FastAPI is sufficient for the first demonstration.
+586: The interface needs photo upload, an optional question, a result, supporting references, and an option to upload another view. Include a clear supported species list. Do not show an unvalidated certainty percentage.
+587: 14 2 Request flow
+588: 1. The user uploads a photograph and optional context such as the general region or season.
+589: 2. Your backend checks file type, dimensions, and size and safely decodes the image.
+590: 3. The backend sends the image and identification question to the model service.
+591: 4. It validates and normalizes the returned candidate species.
+592: 5. Retrieval finds supporting plant records and passages.
+593: 6. The model or a controlled template creates the explanation.
+594: 7. The interface shows suggested identity, evidence, uncertainty, and sources.
+595: If no reliable candidate is available, ask for a clearer photo of leaves, flowers, fruit, or the whole plant. A failed API request should display a retry message, not a fabricated botanical answer.
+596: 14 3 API contract to design
+597: 
+598: This is a suggested application contract, not RunPod's built in request schema. Your worker handler and backend must implement it. Validate generated JSON and handle invalid output.
+599: 14 4 Choose a serving route
+600: For a short demonstration, a protected inference service on a Pod can be simpler. For occasional requests, deploy a compatible worker on RunPod Serverless using the saved adapter plus its matching starting model. The worker must accept images and load the correct processor. Confirm adapter and multimodal support in the chosen serving engine.
+601: 
+602: 14 Continued Serve through RunPod Serverless
+603: 14 5 Prepare the worker
+604: Package your proven inference code, dependency versions, processor, and adapter. Decide whether the foundation checkpoint is baked into the image, loaded from a volume, or downloaded into a cache. Test the container with a real plant image before connecting the full application.
+605: Your handler receives a job, decodes the image, calls the inference function, and returns a JSON result. Loading the model once at worker startup is normally preferable to loading it for every request. Start with one request at a time if your code has not been tested for concurrent GPU use.
+606: RunPod Serverless is an optional deployment stage. The introductory guide is at:
+607: https://docs.runpod.io/serverless/overview
+608: 14 6 Protect the API key
+609: The student browser should call your backend. Your backend keeps the RunPod API key in an environment variable or secret store and calls RunPod. Do not embed the key in browser JavaScript, a mobile package, a public notebook, or source control.
+610: Use the endpoint's documented request format and handle its lifecycle. Queue based endpoints may return a job ID before the result is ready. The backend must poll or use the supported asynchronous flow, enforce timeouts, and handle failures. Do not assume every API request returns an answer immediately.
+611: 14 7 Configure cost and availability
+612: For a prototype, consider zero minimum workers and a low maximum worker count. This can reduce idle compute but the first request may wait for startup and model loading. Workers can bill during initialization and idle waiting, depending on their configuration [10]. Storage and other applicable charges must also be checked.
+613: A photo request is larger than a text request. Enforce upload limits and use suitable image resolution. Test retries carefully so the app does not submit duplicate jobs and pay twice.
+614: 14 8 Demonstrate honestly
+615: Show the cloud processing stage during the presentation. If cloud service availability is uncertain, prepare consented example results clearly labelled as prerecorded and keep a live test separate. Never present a saved response as a live prediction.
+616: Checkpoint: a laptop application sends a real image, receives the trained model's response, and displays errors cleanly without exposing credentials.
+617: 
+618: 15 Move to local hardware
+619: 15 1 Understand what migration means
+620: Moving locally means running the same model and application on equipment under your control. It does not require repeating training. However, the local machine must have enough memory and a compatible runtime. Cloud proof of concept results do not prove equal speed on a smaller machine.
+621: If students have no suitable GPU, completing the cloud proof of concept and documenting hardware requirements is a valid project deliverable when approved by their university. Describe local deployment as future work until it has actually been tested.
+622: 15 2 Transfer the complete package
+623: 
+624: An adapter alone is not a complete model. If you export a merged model instead, test it against the original adapter based setup. Keep the original adapter backup.
+625: 15 3 Migrate in stages
+626: 1. Check local RAM, GPU VRAM, storage, drivers, and operating system support.
+627: 2. Reproduce the cloud inference environment where compatible. Linux or a supported Linux environment can simplify the initial migration.
+628: 3. Copy or download the exact starting checkpoint and load its matching adapter and processor.
+629: 4. Run one image directly before starting the API or interface.
+630: 5. Point the backend's configurable model address to the local service.
+631: 6. Move retrieval, embeddings, and storage locally too.
+632: 7. Repeat accuracy, latency, and failure tests on the local hardware.
+633: For quantized deployment formats, verify support for the exact VLM architecture, image processor or vision projector, and adapter conversion. A text model export command does not prove image support. Do not assume every VLM can be moved into Ollama unchanged.
+634: Checkpoint: after preparing all dependencies, disconnect internet access and verify the intended features still work. Record any remaining external dependencies.
+635: 
+636: Visual guide to moving the system locally
+637: 
+638: Figure 9  Cloud training supports a proof of concept. Fully local operation requires all essential services locally.
+639: Discuss and try
+640: Draw a boundary around the components your team currently controls locally. Identify every cloud dependency.
+641: Prepare a migration checklist and record which local hardware requirements remain untested.
+642: Student notes   __________________________________________________________
+643: ________________________________________________________________________
+644: 
+645: 16 Control spending and troubleshoot
+646: 16 1 Keep a session ledger
+647: Prepare data before renting a GPU. Start with a small upload and a short smoke test. Record the current price, session start and finish, GPU type, storage, and output locations. Back up and stop or terminate compute using the options supported by your Pod configuration. Confirm the actual billing state in the console.
+648: Use this calculation with prices from your account:
+649: Estimated total = GPU hourly rate multiplied by running hours, plus storage, serving, and any applicable additional charges.
+650: For example, a hypothetical rate of USD 0.50 per hour for six hours gives USD 3.00 in GPU time. This is arithmetic only, not a RunPod price quote. Set limits for Serverless scaling and review active workers after a demo.
+651: 16 2 Common problems
+652: 
+653: Before spending on a larger GPU, determine whether the failure is a data issue, software issue, or genuine memory limit. Change one thing and keep the evidence.
+654: 
+655: 17 Complete the project report
+656: 17 1 Recommended report structure
+657: 1. Introduction and the need for an Omani plant assistant.
+658: 2. Objectives, species scope, users, and limitations.
+659: 3. Related work on plant recognition, VLMs, and domain adaptation.
+660: 4. Dataset sources, permissions, expert verification, and split design.
+661: 5. System architecture and the cloud versus local boundary.
+662: 6. Model selection, QLoRA method, environment, and training settings.
+663: 7. Evaluation protocol and baseline comparison.
+664: 8. Results, confusion matrix, error examples, and cost.
+665: 9. Application demonstration and deployment requirements.
+666: 10. Conclusions and future work based on measured evidence.
+667: 17 2 Results table to fill with real measurements
+668: 
+669: Add a separate factual answering comparison with and without RAG. Report failures even if fine tuning does not improve performance. A careful negative result is more credible than an inflated success claim.
+670: 17 3 Handover checklist
+671: Reviewed species catalogue and dataset documentation.
+672: Manifests with independent group splits and data version.
+673: Rights and attribution register; restricted data kept private.
+674: Original model ID and revision plus adapter and processor.
+675: Training notebook, environment lock file, and experiment log.
+676: Baseline and final predictions, scoring rules, and metrics.
+677: Application code, configuration example, and startup instructions.
+678: Cost ledger, known limitations, and local hardware requirements.
+679: Your model card should state the intended uses, selected species, languages, data provenance, evaluation results, and failure cases. It should explain that photo based identity suggestions are not authoritative botanical determinations.
+680: Checkpoint: another student can understand the dataset, reload the model, and reproduce the evaluation without relying on your memory.
+681: 
+682: 18 References and further reading
+683: Official technical sources were checked on 29 October 2026. Follow the live documentation when an interface changes, but preserve the environment used for the submitted experiment. The practical scope, budgets, dataset targets, and milestone suggestions in this guide are educational recommendations rather than vendor guarantees.
+684: [1] Qwen. Qwen3 VL 2B Instruct official model card. Model identity, license, and image and text inference examples.
+685: https://huggingface.co/Qwen/Qwen3-VL-2B-Instruct
+686: [2] Unsloth. Vision Fine tuning. Image conversation preparation and vision data collator.
+687: https://unsloth.ai/docs/basics/vision-fine-tuning
+688: [3] Unsloth. Qwen3 VL guide and official notebooks. Model family support and a version specific training reference.
+689: https://unsloth.ai/docs/models/qwen3-vl-how-to-run-and-fine-tune
+690: https://github.com/unslothai/notebooks
+691: Notebook file: nb/Qwen3_VL_(8B)-Vision.ipynb. The published example uses an 8B model; this guide proposes a smaller 2B candidate that students must smoke test.
+692: [4] Unsloth. Documentation and installation guidance. Official container and supported environment instructions.
+693: https://unsloth.ai/docs
+694: [5] RunPod. Manage Pods. Deployment and lifecycle operations.
+695: https://docs.runpod.io/pods/manage-pods
+696: [6] RunPod. Storage options. Container disk, Pod volume, and independent storage behavior.
+697: https://docs.runpod.io/pods/storage/types
+698: [7] Hugging Face. PEFT checkpoint format. Adapter files and the requirement for the original model.
+699: https://huggingface.co/docs/peft/main/en/developer_guides/checkpoint
+700: [8] scikit learn. GroupShuffleSplit. Group based splitting of related samples.
+701: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GroupShuffleSplit.html
+702: [9] Hugging Face. Retrieval Augmented Generation. External document retrieval alongside model generation.
+703: https://huggingface.co/docs/transformers/model_doc/rag
+704: [10] RunPod. Serverless overview and pricing. Serving behavior, worker lifecycle, and billing.
+705: https://docs.runpod.io/serverless/overview
+706: https://docs.runpod.io/serverless/pricing
+707: 
+708: Glossary and final student checklist
+709: 
+710: Before training: Can you explain the task, verify the species labels, and prove the splits are independent?
+711: Before deployment: Can you reload the saved adapter, compare against the original model, and handle unknown plants?
+712: Before submission: Can someone else reproduce your results, understand the limitations, and trace your document claims to their sources?
+713: First practical action: choose a small approved species list and collect a reviewed sample of photographs. Use that sample to prove the complete loading, training, saving, and evaluation workflow before expanding the project.
+714: 
+715: 
+716: 
+717: 
+718: 
+719: 
+720: 
+721: 
+722: 
+723: 
+724: 
+725: Appendix A
+726: 
+727: 
+728: Start with a RunPod Pod for training and your first demo. Add Serverless after the model and application work. The implementation uses Python FastAPI + React, as requested.
+729: Follow this order:
+730: Prepare the photographs on your laptop. Select species with a botanical adviser and verify each image’s identity.
+731: Create the dataset. Record species labels, visible features, permissions, and individual plant IDs.
+732: Rent a GPU Pod. Use a compatible Unsloth environment and persistent storage.
+733: Upload the code and dataset. Check that Python can access the GPU.
+734: Validate and split the dataset. Keep photographs of the same individual plant together.
+735: Download the starting VLM. The code records its exact revision for reproducibility.
+736: Test the original model. Save its results before training.
+737: Run the short QLoRA training check. Confirm that the adapter saves and reloads.
+738: Complete the pilot training and evaluation. Compare the original and adapted models on the same unseen photographs.
+739: Run the model API on the Pod.
+740: Deploy FastAPI and React on your VPS. The application sends photographs to RunPod and displays the results.
+741: Optionally deploy Serverless. The package includes a custom worker and instructions for submitting and checking jobs.
+742: The guide identifies which computer to use for every command.
+743: 
+744: 
+745: 
+746: 

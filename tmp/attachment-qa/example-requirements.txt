@@ -1,0 +1,7 @@
+Example requirements for an educational dashboard
+
+- Explain the purpose clearly.
+- Support Arabic and English.
+- Show how the master assigns work to a researcher and a designer.
+- Keep sources and acceptance criteria visible.
+- Ask for plan approval before workers start.

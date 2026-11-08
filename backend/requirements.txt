@@ -1,0 +1,13 @@
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+sqlalchemy>=2.0,<3
+alembic>=1.14,<2
+pydantic>=2.10,<3
+pytest>=7.4,<9
+httpx>=0.28,<1
+python-dotenv>=1.0,<2
+python-docx>=1.2,<2
+reportlab>=4.4,<6
+arabic-reshaper>=3,<4
+python-bidi>=0.6,<1
+PyMuPDF>=1.26,<2

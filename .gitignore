@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.venv/
+__pycache__/
+.pytest_cache/
+.pytest-tmp/
+.pytest-tmp-*/
+*.tsbuildinfo
+*.db
+.env
+*.log
+
+tmp/export-qa/

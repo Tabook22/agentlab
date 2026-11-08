@@ -1,0 +1,18 @@
+import {agentsFrom,planFrom,type LabEvent} from './events';
+import {missionProgress} from './monitor';
+
+export function theaterStory(events:LabEvent[],status:string){
+ const latest=events.at(-1),progress=missionProgress(events);
+ const approval=events.findLast(e=>e.type==='master.final_approved');
+ if(status==='PAUSED'||status==='AWAITING_LIMIT_APPROVAL')return {title:'The mission is paused',why:'Work is saved. Resume when you are ready to let the team continue.',event:latest,topic:'control' as const};
+ if(status==='AWAITING_CLARIFICATION')return {title:'The master has a question for you',why:'Answer the clarification above. The master will use it to understand the mission before proposing roles or assigning workers.',event:events.findLast(e=>e.type==='mission.clarification_requested'),topic:'plan' as const};
+ if(status==='AWAITING_APPROVAL')return {title:'Your team is ready for review',why:'Read the proposed roles, names and estimates. Workers begin after you approve the plan.',event:latest,topic:'plan' as const};
+ if(status==='FAILED'||status==='CANCELLED')return {title:status==='FAILED'?'The mission needs attention':'The mission was cancelled',why:events.findLast(e=>['mission.failed','mission.cancelled','mission.cancel'].includes(e.type))?.payload.summary??'Saved work remains available for inspection.',event:latest,topic:'control' as const};
+ if(status==='COMPLETED')return {title:approval?'The master approved the final answer':'The recorded run has ended',why:approval?'The team’s contributions have passed the master’s final mission review. Open the result to inspect the answer and its sources.':'Inspect the recorded result and review evidence. This recording does not contain a final master approval.',event:latest,topic:'output' as const};
+ const pending=progress.pending;
+ const actor=pending?.agent_id?agentsFrom(events).find(a=>a.id===pending.agent_id)?.config.name??'A worker':'The master';
+ if(pending)return {title:pending.type==='research.started'?`${actor} is researching sources`:pending.type==='agent.tool_started'?`${actor} is using a tool`:String(pending.payload.purpose).toLowerCase().includes('review')?`${actor} is reviewing a draft`:`${actor} is preparing the next step`,why:pending.type==='research.started'?'The worker is gathering evidence for its assignment. Sources and a draft appear when the request returns.':String(pending.payload.purpose).toLowerCase().includes('review')?'The master is comparing the submission with the task criteria and your original goal before accepting it or requesting changes.':'A recorded request is in progress. The next result has not arrived yet; moving packets show activity, not a completed answer.',event:pending,topic:pending.type==='research.started'?'research' as const:'act' as const};
+ const lastReview=events.findLast(e=>e.type==='master.review_completed');
+ if(latest&&lastReview&&latest.sequence-lastReview.sequence<6&&!lastReview.payload.approved)return {title:'The master has requested improvements',why:lastReview.payload.data?.feedback??lastReview.payload.summary,event:lastReview,topic:'adjust' as const};
+ return {title:!events.length?'Your next question starts here':planFrom(events)?'The team is moving the mission forward':'The master is shaping a plan',why:!events.length?'Give the master a goal. It will explain the team and tasks before you approve execution.':planFrom(events)?'Follow the active agents and open a connection to read the work exchanged between them.':'The master interprets your goal, chooses useful roles and explains how their work will fit together.',event:latest,topic:!events.length?'start' as const:'plan' as const};
+}
