@@ -17,14 +17,14 @@ function inline(text:string){return citationParts(text).map((part,i)=>part.url?<
 function cells(line:string){return line.trim().replace(/^\|/,'').replace(/\|$/,'').split('|').map(cell=>cell.trim());}
 const heading=(line:string)=>/^(#{1,6})\s+(.+)$/.exec(line);
 const item=(line:string)=>/^\s*(?:([-*+])|\d+[.)])\s+(.+)$/.exec(line);
-export function AnswerText({content}:{content:string}){
+export function AnswerText({content,excerpt=false}:{content:string;excerpt?:boolean}){
  const {language}=useLanguage(),ar=language==='ar';
  const lines=content.replace(/\r\n?/g,'\n').split('\n'),blocks:ReactNode[]=[],sections:{id:string;title:string;depth:number}[]=[];
  let i=0;
  while(i<lines.length){
   const line=lines[i];if(!line.trim()){i++;continue;}
   const h=heading(line);
-  if(h){const id=`answer-section-${i}`;sections.push({id,title:h[2],depth:h[1].length});const Tag=`h${Math.max(3,Math.min(6,h[1].length+1))}` as 'h3'|'h4'|'h5'|'h6';blocks.push(<Tag id={id} key={i}>{inline(h[2])}</Tag>);i++;continue;}
+  if(h){const id=`${excerpt?'answer-visual-section':'answer-section'}-${i}`;sections.push({id,title:h[2],depth:h[1].length});const Tag=`h${Math.max(3,Math.min(6,h[1].length+1))}` as 'h3'|'h4'|'h5'|'h6';blocks.push(<Tag id={id} key={i}>{inline(h[2])}</Tag>);i++;continue;}
   if(line.trim().startsWith('```')){const start=i;const code=[];i++;while(i<lines.length&&!lines[i].trim().startsWith('```'))code.push(lines[i++]);if(i<lines.length)i++;blocks.push(<pre key={start}><code>{code.join('\n')}</code></pre>);continue;}
   if(/^\s*(?:---+|\*\*\*+)\s*$/.test(line)){blocks.push(<hr key={i++}/>);continue;}
   if(i+1<lines.length&&line.includes('|')&&cells(lines[i+1]).length>=2&&cells(lines[i+1]).every(cell=>/^:?-{3,}:?$/.test(cell))){const start=i,headers=cells(line),rows:string[][]=[];i+=2;while(i<lines.length&&lines[i].trim()&&lines[i].includes('|'))rows.push(cells(lines[i++]));blocks.push(<div className="answer-table" key={start}><table><thead><tr>{headers.map((cell,n)=><th key={n} scope="col">{inline(cell)}</th>)}</tr></thead><tbody>{rows.map((row,n)=><tr key={n}>{row.map((cell,c)=><td key={c}>{inline(cell)}</td>)}</tr>)}</tbody></table></div>);continue;}
@@ -37,5 +37,5 @@ export function AnswerText({content}:{content:string}){
  }
  const topLevel=Math.min(...sections.map(section=>section.depth));
  const navigation=sections.filter(section=>section.depth===topLevel);
- return <div className="answer-reading" dir="auto">{navigation.length>2&&<nav className="answer-contents" aria-label={ar?'أقسام الإجابة':'Answer sections'}><strong><List size={15}/>{ar?'انتقل إلى القسم':'Jump to a section'}</strong><div>{navigation.map(section=><a href={`#${section.id}`} key={section.id}>{section.title.replace(/\*\*/g,'')}</a>)}</div></nav>}{blocks}</div>;
+ return <div className={excerpt?'answer-visual-reading':'answer-reading'} dir="auto">{!excerpt&&navigation.length>2&&<nav className="answer-contents" aria-label={ar?'أقسام الإجابة':'Answer sections'}><strong><List size={15}/>{ar?'انتقل إلى القسم':'Jump to a section'}</strong><div>{navigation.map(section=><a href={`#${section.id}`} key={section.id}>{section.title.replace(/\*\*/g,'')}</a>)}</div></nav>}{blocks}</div>;
 }

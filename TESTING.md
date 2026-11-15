@@ -179,3 +179,17 @@ backend was restarted to activate the new routes. Preview uses mocked data:
   collaboration section had equal client/scroll widths with no horizontal overflow.
 - Existing motion controls and reduced-motion preferences govern loop effects.
   No paid model calls or backend behavior changes were needed.
+
+## Approved answer infographic — 16 November 2026
+
+- Frontend: 129 tests passed. Added coverage for approval/delivery gating,
+  historical isolation, heading hierarchy, numbered instructions, fenced code,
+  zero/negative values, complete section coverage, safe SVG escaping, source URL
+  validation, Arabic labels, and keeping rich-copy selectors on the original answer.
+- Browser-checked a saved approved simulation and a six-part local written-answer
+  fixture: automatic display, overview map, part selection, navigation and guided
+  progression to the final part. PNG generation completed successfully in-browser.
+- Arabic infographic text and width/scroll width were checked; no section overflow.
+- Example standalone SVG was generated and XML-validated. SVG/PNG use local assets,
+  retain limitations and attached references, and label excerpts as excerpts.
+- No paid model requests, backend data changes or approval bypasses were needed.

@@ -202,6 +202,16 @@ is read-only. **Replay key moments** steps through saved events with no new AI c
 The original animated view remains available under **Mission map**.
 
 
+Approved final answers also include an illustrated companion. The visual uses the
+answer's own headings, numbered instructions or paragraphs, and displays recorded
+numerical results where available. Students can switch between an overview map
+and a reading path, select a part for its full explanation, or play a guided
+walkthrough. Cards contain short excerpts; all parts remain accessible, and the
+original answer stays available below. SVG and PNG exports include every part,
+limitations and attached source references. Reading order does not imply that
+proposed actions were performed. This local visual adds no model calls and only
+appears after recorded final approval and delivery, including during replay.
+
 The Student classroom includes three connected collaboration tools:
 
 - Team conversation: filter recorded assignments, questions, ideas, feedback and
