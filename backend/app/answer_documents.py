@@ -63,6 +63,8 @@ def document_sections(package):
         for source in package['sources']:
             yield ('paragraph',0,source['title'])
             yield ('paragraph',0,f"[{source['url']}]({source['url']})")
+    if package.get('resource_content') and package.get('variant')=='answer':
+        yield from blocks(package['resource_content'])
 
 def report_status(package):
     ar=rtl(package['goal']+' '+package['content'])

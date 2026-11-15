@@ -38,6 +38,7 @@ class BudgetDenialRequest(BaseModel):
 
 
 class MissionRequest(BaseModel):
+    find_resources: bool = False
     attachment_ids: list[str] = Field(default_factory=list,max_length=5)
     open_ended: bool = True
     language: Literal['en','ar'] = 'en'
@@ -147,12 +148,12 @@ def create_app(url=None, delay=None, provider=None):
             db.add(mission)
             db.flush()
             runner.emit(db, mission.id, 'mission.created', {'summary': 'Live AI mission received.' if body.mode=='live' else 'Simulation mission received.',
-                'prompt': mission.prompt, 'scenario': mission.scenario,'mode':body.mode,'language':body.language,
+                'prompt': mission.prompt, 'scenario': mission.scenario,'mode':body.mode,'language':body.language,'find_resources':body.find_resources,
                 'attachment_ids':body.attachment_ids,'attachments':[public_attachment(row,False) for row in sources],
                 'limits':{'max_workers':body.max_workers,'max_iterations':body.max_iterations,'budget_usd':body.budget_usd,'open_ended':body.open_ended} if body.mode=='live' else {}})
             result = serialize(mission)
             if sources:runner.emit(db,mission.id,'mission.attachments_received',{'summary':f'{len(sources)} source files prepared for the commander. Your comments define the task; file contents are supporting evidence.','attachments':[public_attachment(row,False) for row in sources]})
-        runner.start(mission.id,body.mode,{'max_workers':body.max_workers,'max_iterations':body.max_iterations,'budget_usd':body.budget_usd,'language':body.language,'open_ended':body.open_ended})
+        runner.start(mission.id,body.mode,{'max_workers':body.max_workers,'max_iterations':body.max_iterations,'budget_usd':body.budget_usd,'language':body.language,'open_ended':body.open_ended,'find_resources':body.find_resources})
         return result
 
     @app.get('/api/missions')
@@ -573,6 +574,8 @@ def create_app(url=None, delay=None, provider=None):
     app.include_router(master_chat_router(runner,require,require_local))
     from .answer_export import answer_export_router
     app.include_router(answer_export_router(runner,require,require_local))
+    from .answer_resources import answer_resources_router
+    app.include_router(answer_resources_router(runner,require,require_local))
     from .attachments import attachments_router
     app.include_router(attachments_router(runner,require_local))
     return app

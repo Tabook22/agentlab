@@ -1,11 +1,12 @@
 import { HelpButton } from './Help';
 import {useEffect,useState} from 'react';
-import {Translate} from './i18n';
+import {Translate,useLanguage} from './i18n';
 import {agentsFrom,type LabEvent} from './events';
 import {normalizeWorkerName,workerNamesError} from './workerNames';
 import './workerNames.css';
 
 export function PlanApprovalReport({request,events,canApprove,onDecision,onDiscuss}:{request:LabEvent;events:LabEvent[];canApprove:boolean;onDiscuss?:()=>void;onDecision?:(action:'approve'|'decline',planId:string,cap?:number,names?:Record<string,string>)=>Promise<void>}){
+ const {language}=useLanguage();
  const estimate=request.payload.estimate;
  const currentNames=new Map(agentsFrom(events).map(agent=>[agent.id,agent.config.name]));
 
@@ -39,6 +40,7 @@ export function PlanApprovalReport({request,events,canApprove,onDecision,onDiscu
   <div className="plan-estimate-grid"><div><span>Proposed team</span><strong>1 commander + {request.payload.worker_plan.tasks.length} workers</strong></div><div><span>Estimated total API cost<HelpButton topic="cost"/></span><strong>${estimate.estimated_total_low_usd.toFixed(2)} – ${estimate.estimated_total_high_usd.toFixed(2)}</strong></div><div><span>Execution policy</span><strong>Open-ended · until master approval</strong></div><div><span>Estimated execution time</span><strong>{estimate.estimated_seconds_low} – {estimate.estimated_seconds_high} seconds</strong></div><div><span>Planning cost already incurred</span><strong>${estimate.planning_usage.estimated_cost_usd.toFixed(4)}</strong></div></div>
   {estimate.source_reading_cost_usd>0&&<p>Attachment reading already incurred: ${estimate.source_reading_cost_usd.toFixed(4)} · separate from the execution estimate.</p>}
   <p>The estimate includes planning usage. Actual cost and time can exceed this estimate. Execution continues until master approval; pause or cancel any time.</p>
+  {estimate.related_resources_enabled&&<p className="plan-scope">{language==='ar'?'بعد تسليم الإجابة، سيبحث القائد عن موارد إضافية مرتبطة بها. يتضمن التقدير أربعة طلبات نموذج إضافية، منها عمليتا بحث محدودتان، ضمن مخصص المهمة. تبقى الإجابة متاحة إذا تعذر البحث.':'After delivery, the commander will discover related learning resources. The estimate includes four additional model requests, including two bounded web-research requests, within the mission allowance. The answer stays available if discovery cannot finish.'}</p>}
   <details><summary>Estimate assumptions and limits</summary><p>{estimate.estimate_basis}</p><p>{estimate.expected_additional_calls} expected additional model calls for the initial pass. Additional work increases cost; app resource caps are disabled.</p><p>Assumed input tokens per call: {estimate.assumptions.input_tokens_per_call}. Assumed output tokens per worker: {estimate.assumptions.output_tokens_per_worker}.</p><p>Configured rates per million tokens: input ${estimate.assumptions.input_usd_per_million}, output ${estimate.assumptions.output_usd_per_million}.</p></details>
   {error&&<p role="alert">{error}</p>}
   {canApprove&&!approved&&!declined&&<div className="plan-consent"><p>Approving authorizes open-ended paid execution of this plan. Cost estimates remain visible. You can pause or cancel at any time.</p><div className="plan-consent-buttons"><button disabled={busy||!!nameError} onClick={()=>void decide('approve')}>{busy?'Processing…':'Approve this plan and start workers'}</button><button disabled={busy} onClick={()=>void decide('decline')}>Decline plan · return to mission input</button></div></div>}

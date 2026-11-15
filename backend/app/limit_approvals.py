@@ -14,7 +14,7 @@ FIELDS={'cycles':'max_iterations','calls':'max_calls','tokens':'token_budget','c
 def effective_options(db,key,base):
     current,_,events=budget_state(db,key,base)
     created=next(e for e in events if e.type=='mission.created')
-    options={**created.payload.get('limits',{}),'budget_usd':current,'language':created.payload.get('language','en'),
+    options={**created.payload.get('limits',{}),'budget_usd':current,'language':created.payload.get('language','en'),'find_resources':created.payload.get('find_resources',False),
              'max_calls':base.max_calls,'token_budget':base.token_budget,'master_steps':base.master_steps,'mission_timeout':base.mission_timeout}
     for event in events:
         if event.type=='mission.limits_extended':options['max_iterations']=event.payload['max_iterations']

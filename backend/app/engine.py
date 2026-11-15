@@ -32,6 +32,7 @@ class Orchestrator:
         self.jobs = {}
         self.provider = provider
         self.live_jobs = set()
+        self.resource_jobs = {}
 
     def emit(self, db, mission_id, kind, payload, agent_id=None, task_id=None):
         seq = db.scalar(select(func.max(Event.sequence)).where(Event.mission_id == mission_id)) or 0
@@ -304,7 +305,7 @@ class Orchestrator:
             self.jobs.pop(mission_id, None)
 
     async def close(self):
-        jobs = list(self.jobs.values())
+        jobs = list(self.jobs.values()) + list(self.resource_jobs.values())
         for job in jobs:
             job.cancel()
         await asyncio.gather(*jobs, return_exceptions=True)

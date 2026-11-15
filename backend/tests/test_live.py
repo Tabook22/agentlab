@@ -1104,3 +1104,45 @@ def test_pending_master_clarification_survives_reload_and_can_be_cancelled(make_
     assert client.post(f'/api/missions/{key}/cancel').status_code==200
     assert client.post(f"/api/missions/{key}/clarifications/{question['id']}/answer",json={'answer':'Too late'}).status_code==409
     assert len(requests)==count and not client.get(f'/api/missions/{key}').json()['agents']
+
+
+def test_related_resource_option_survives_plan_consent_and_starts_after_delivery(make_client,monkeypatch):
+    calls=[]
+    def capture(runner,key,output,prompt,language,budget):
+        with runner.sessions() as db:
+            from app.db import Mission,Event
+            from sqlalchemy import select
+            assert db.get(Mission,key).status=='COMPLETED'
+            events=list(db.scalars(select(Event).where(Event.mission_id==key).order_by(Event.sequence)))
+            assert events[-1].type=='mission.completed'
+            assert any(e.type=='master.final_approved' for e in events)
+        calls.append((key,output,budget.snapshot()))
+    monkeypatch.setattr('app.answer_resources.start_resource_search',capture)
+    client,requests=make_client()
+    key=start(client,find_resources=True)
+    final=finish(client,key)
+    assert final['status']=='COMPLETED'
+    assert len(calls)==1 and calls[0][0]==key
+    assert calls[0][1]['master_approved'] is True
+    assert calls[0][2]['calls']==len(requests)
+    plan=next(e for e in client.get(f'/api/missions/{key}/events').json() if e['type']=='mission.plan_approval_requested')
+    assert plan['payload']['estimate']['related_resources_enabled'] is True
+    assert plan['payload']['estimate']['related_resource_model_requests']==4
+
+
+def test_related_resource_preference_is_preserved_while_clarifying(make_client):
+    client,_=make_client(master_help=True)
+    key=start(client,find_resources=True)
+    assert finish(client,key)['status']=='AWAITING_CLARIFICATION'
+    question=next(e for e in client.get(f'/api/missions/{key}/events').json() if e['type']=='mission.clarification_requested')
+    assert question['payload']['options']['find_resources'] is True
+
+
+def test_resource_scheduling_error_cannot_revoke_final_approval(make_client,monkeypatch):
+    def fail(*args):raise RuntimeError('Test-only scheduling error')
+    monkeypatch.setattr('app.answer_resources.start_resource_search',fail)
+    client,_=make_client()
+    key=start(client,find_resources=True)
+    final=finish(client,key)
+    assert final['status']=='COMPLETED' and final['output']['master_approved'] is True
+    assert not any(e['type']=='mission.failed' for e in client.get(f'/api/missions/{key}/events').json())

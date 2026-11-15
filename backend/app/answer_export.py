@@ -24,7 +24,10 @@ def answer_package(db,mission):
         if not isinstance(source,dict):continue
         url=source.get('url','')
         if safe_url(url) and url not in seen:sources.append({'title':clean_text(source.get('title') or url),'url':url});seen.add(url)
-    return {'mission_id':mission.id,'title':title,'goal':mission.prompt,'content':body.strip(),
+    from .answer_resources import resources_markdown
+    resources=(mission.output or {}).get('learning_resources')
+    supplement=resources_markdown(resources,any('\u0600'<=c<='\u06ff' for c in body))
+    return {'learning_resources':resources,'resource_content':supplement,'mission_id':mission.id,'title':title,'goal':mission.prompt,'content':body.strip(),
             'limitations':[clean_text(x) for x in output.get('limitations',[])], 'sources':sources,
             'master_approved':bool(approved),'mode':mission.mode,'variant':'answer'}
 

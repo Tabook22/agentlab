@@ -193,3 +193,19 @@ backend was restarted to activate the new routes. Preview uses mocked data:
 - Example standalone SVG was generated and XML-validated. SVG/PNG use local assets,
   retain limitations and attached references, and label excerpts as excerpts.
 - No paid model requests, backend data changes or approval bypasses were needed.
+
+## Related learning resources — 16 November 2026
+
+- Backend: 166 tests passed using mocked providers. New coverage includes grounded
+  URL selection, specific video links, duplicate requests, stopping, interrupted
+  jobs, retained usage and approval, budget failures, failed refresh preservation,
+  resource supplements in exports, nonlocal access rejection, and automatic search
+  preferences surviving clarification and plan consent.
+- Frontend: 134 tests passed, including safe resource links, resource categories,
+  historical isolation, English/Arabic labels, and copied answer supplements.
+- TypeScript and production build with `--base=/agentlab/` passed.
+- Browser checks used a visibly labeled mocked resource fixture: type filtering,
+  local explored marks, English/Arabic presentation, start-here route and layout.
+  No real provider requests or paid web searches were made for verification.
+- Final answers remain available while independent discovery runs. Provider/limit
+  failures and search scheduling errors cannot change a completed mission to failed.

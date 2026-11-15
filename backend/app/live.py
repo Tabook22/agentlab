@@ -285,7 +285,7 @@ async def run_live(runner,key,options):
                                 'summary':plan.help_request,'question':plan.help_request,'understanding':plan.scope,
                                 'status':WAITING_CLARIFICATION,'usage':budget.snapshot(),
                                 'options':{'max_workers':max_workers,'max_iterations':max_iterations,'language':language,
-                                    'budget_usd':budget.limit_usd,'open_ended':budget.open_ended}})
+                                    'budget_usd':budget.limit_usd,'open_ended':budget.open_ended,'find_resources':options.get('find_resources',False)}})
                         return
                     if len(plan.tasks)>max_workers:
                         raise LiveError('The commander proposed more workers than the configured mission limit.')
@@ -312,7 +312,7 @@ async def run_live(runner,key,options):
                          'known_limitations':['Only assigned tools, public web research and model-generated text are available. Fieldwork is not performed.'],
                          'selected_tool':'agent_factory'})
                     with runner.sessions() as db:source_documents=mission_sources(db,key)
-                    estimate=estimate_plan(plan,runner.provider,budget.snapshot(),max_iterations,budget.limit_usd,source_characters=sum(len(s['text']) for s in source_documents))
+                    estimate=estimate_plan(plan,runner.provider,budget.snapshot(),max_iterations,budget.limit_usd,source_characters=sum(len(s['text']) for s in source_documents),find_resources=options.get('find_resources',False))
                     estimate['source_reading_cost_usd']=sum(s['reading_usage'].get('estimated_cost_usd',0) for s in source_documents)
                     estimate['open_ended']=budget.open_ended
                     if budget.open_ended:
@@ -325,7 +325,7 @@ async def run_live(runner,key,options):
                         runner.emit(db,key,'mission.plan_approval_requested',{
                             'summary':'Commander report ready. Waiting for admin approval before creating or running workers.',
                             'status':'AWAITING_APPROVAL','worker_plan':plan.model_dump(),'task_ids':task_ids,'agent_ids':agent_ids,
-                            'estimate':estimate,'options':{'max_workers':max_workers,'max_iterations':max_iterations,'language':language,'open_ended':budget.open_ended},
+                            'estimate':estimate,'options':{'max_workers':max_workers,'max_iterations':max_iterations,'language':language,'open_ended':budget.open_ended,'find_resources':options.get('find_resources',False)},
                             'report':explanation.model_dump()})
                     return
                 await runner.checkpoint(key)
@@ -487,6 +487,12 @@ async def run_live(runner,key,options):
                 mission=db.get(Mission,key);mission.output=output;mission.status='COMPLETED'
                 runner.emit(db,key,'mission.completed',{'summary':'Live mission complete. The commander’s combined answer is ready.',
                     'output':output,'source':'master','source_agent_ids':agent_ids,'mode':'live'})
+            if options.get('find_resources'):
+                from .answer_resources import start_resource_search
+                try:start_resource_search(runner,key,output,prompt,language,budget)
+                except Exception:
+                    import logging
+                    logging.exception('Could not schedule supplemental resources; approved answer retained.')
     except asyncio.CancelledError:
         cleanup(runner,key,'CANCELLED','Live execution cancelled. An in-flight provider request may still be billed.',budget)
     except TimeoutError:

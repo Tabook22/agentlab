@@ -202,6 +202,31 @@ is read-only. **Replay key moments** steps through saved events with no new AI c
 The original animated view remains available under **Mission map**.
 
 
+Live missions launched in the app can automatically discover related learning
+resources after the approved answer is delivered. The composer enables this by
+default and allows it to be switched off. The API accepts `find_resources: true`
+explicitly; existing API clients remain opt-in. The preference survives mission
+clarification, plan approval and resumed execution.
+
+The separate resource guide supports specific videos/talks, papers, books,
+articles/magazines, podcasts, applications/tools and courses when supported by
+retrieved search results. Each recommendation explains relevance, practical use,
+level and known access information. A suggested starting route and type filters
+help readers navigate. Missing categories are shown rather than filled with
+invented links. Search discovery is not independent verification.
+
+Discovery uses up to four model requests (query planning, two bounded searches,
+and curation), respects the mission's existing allowance and stops after two
+minutes. It never silently increases spending, blocks access to the approved
+answer or revokes its approval. Searches can be stopped or explicitly repeated;
+failed refreshes retain previously found resources. Interrupted searches do not
+restart automatically. Simulation and replay never perform automatic web searches.
+A configured backend API key is required for live discovery.
+
+Saved resources are included as a separate supplement in copy, PDF and Word
+exports. They do not rewrite the approved answer or become citations for its
+claims. The source and resource lists remain distinct.
+
 Approved final answers also include an illustrated companion. The visual uses the
 answer's own headings, numbered instructions or paragraphs, and displays recorded
 numerical results where available. Students can switch between an overview map

@@ -5,11 +5,11 @@ import {useLanguage} from './i18n';
 import {answerPlainText,reusablePrompt,type AnswerPackage} from './answerPackage';
 import './answerActions.css';
 
-export function AnswerActions({missionId}:{missionId:string}){
+export function AnswerActions({missionId,resourceVersion}:{missionId:string;resourceVersion?:string}){
  const {language}=useLanguage(),ar=language==='ar';
  const [data,setData]=useState<AnswerPackage|null>(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(''),[prompt,setPrompt]=useState<string|null>(null),[manual,setManual]=useState<string|null>(null);
  const manualRef=useRef<HTMLTextAreaElement>(null),editorRef=useRef<HTMLTextAreaElement>(null),mounted=useRef(true);
- useEffect(()=>{mounted.current=true;let alive=true;fetch(`${apiBase}/missions/${missionId}/answer/package`).then(async response=>{const body=await response.json();if(!response.ok)throw Error(body.detail||'The approved answer is unavailable.');if(alive)setData(body);}).catch(cause=>{if(alive)setError(cause.message);});return()=>{alive=false;mounted.current=false;};},[missionId]);
+ useEffect(()=>{mounted.current=true;let alive=true;fetch(`${apiBase}/missions/${missionId}/answer/package`).then(async response=>{const body=await response.json();if(!response.ok)throw Error(body.detail||'The approved answer is unavailable.');if(alive)setData(body);}).catch(cause=>{if(alive)setError(cause.message);});return()=>{alive=false;mounted.current=false;};},[missionId,resourceVersion]);
  useEffect(()=>{if(manual!==null){manualRef.current?.focus();manualRef.current?.select();}},[manual]);
  useEffect(()=>{if(prompt!==null)editorRef.current?.focus();},[prompt===null]);
  async function copy(text:string,rich=false){
@@ -19,7 +19,7 @@ export function AnswerActions({missionId}:{missionId:string}){
    if(rich&&reading&&typeof ClipboardItem!=='undefined'&&navigator.clipboard?.write){
     const clone=reading.cloneNode(true) as HTMLElement;clone.querySelector('.answer-contents')?.remove();clone.querySelectorAll('[id]').forEach(node=>node.removeAttribute('id'));clone.querySelectorAll('table').forEach(node=>node.setAttribute('style','border-collapse:collapse;width:100%;margin:12px 0'));clone.querySelectorAll('th,td').forEach(node=>node.setAttribute('style','border:1px solid #ddd;padding:8px;text-align:start;vertical-align:top'));clone.querySelectorAll('th').forEach(node=>node.setAttribute('style','border:1px solid #ddd;padding:8px;text-align:start;background:#eee7f5'));
     const escape=(s:string)=>s.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
-    const html=`<div style="font-family:Arial;font-size:11pt;line-height:1.5"><h1>${escape(data!.title)}</h1><h2>${ar?'الهدف الأصلي':'Original goal'}</h2><p dir="auto">${escape(data!.goal)}</p>${clone.innerHTML}${data!.limitations.length?`<h2>${ar?'القيود':'Limitations'}</h2><ul>${data!.limitations.map(v=>`<li>${escape(v)}</li>`).join('')}</ul>`:''}${data!.sources.length?`<h2>${ar?'المصادر':'Sources'}</h2><ul>${data!.sources.map(s=>`<li><a href="${escape(s.url)}">${escape(s.title)}</a> - ${escape(s.url)}</li>`).join('')}</ul>`:''}</div>`;
+    const html=`<div style="font-family:Arial;font-size:11pt;line-height:1.5"><h1>${escape(data!.title)}</h1><h2>${ar?'الهدف الأصلي':'Original goal'}</h2><p dir="auto">${escape(data!.goal)}</p>${clone.innerHTML}${data!.resource_content?`<h2>${ar?'موارد للتعلم والتطبيق':'Resources for learning and application'}</h2><p style="white-space:pre-wrap">${escape(data!.resource_content)}</p>`:''}${data!.limitations.length?`<h2>${ar?'القيود':'Limitations'}</h2><ul>${data!.limitations.map(v=>`<li>${escape(v)}</li>`).join('')}</ul>`:''}${data!.sources.length?`<h2>${ar?'المصادر':'Sources'}</h2><ul>${data!.sources.map(s=>`<li><a href="${escape(s.url)}">${escape(s.title)}</a> - ${escape(s.url)}</li>`).join('')}</ul>`:''}</div>`;
     try{await navigator.clipboard.write([new ClipboardItem({'text/plain':new Blob([text],{type:'text/plain'}),'text/html':new Blob([html],{type:'text/html'})})]);}
     catch{await navigator.clipboard.writeText(text);}
    }else await navigator.clipboard.writeText(text);
