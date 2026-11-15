@@ -202,13 +202,14 @@ is read-only. **Replay key moments** steps through saved events with no new AI c
 The original animated view remains available under **Mission map**.
 
 
-Agents use simple professional role symbols: coordination, research, data preparation,
-analysis, weather, visualization, development, writing, planning, design, support and
-review. Unknown roles use a neutral symbol instead of an arbitrary specialty. Labels
-are available in English and Arabic. A subtle working indicator follows recorded
-activity and respects reduced-motion settings; workflow and message effects remain
-available. No model calls or external avatar services are needed. To regenerate the
-role-symbol contact sheet, run `node scripts/avatar-preview.mjs` from `frontend`.
+Agents use professional robotic busts with metallic shells, sensor visors and
+small task-specific chest modules. The master has a distinct darker finish.
+Workers cover research, data preparation, analysis, weather, visualization,
+development, writing, planning, design, support and review. Unknown roles use a
+neutral task module. English and Arabic role labels and existing workflow effects
+remain available. Working sensors respect reduced-motion settings. No model calls
+or external avatar services are needed. To regenerate the avatar contact sheet,
+run `node scripts/avatar-preview.mjs` from `frontend`.
 
 
 ## Clarification before delegation

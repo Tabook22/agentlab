@@ -46,6 +46,25 @@ export function Robot({color='blue',active=false,small=false,leader=false,identi
  const agent=avatarCharacter({leader,role,identity,personality});
  const Icon=symbols[agent.personality];
  return <div className={`robot agent-avatar ${color} avatar-${agent.personality} ${active?'working':''} ${small?'small':''}`} data-personality={agent.personality} data-role-symbol={agent.symbol} style={{'--agent-tone':agent.dark,'--agent-surface':agent.light,'--agent-accent':agent.color} as CSSProperties} aria-hidden="true">
-  <span className="agent-emblem-frame"><Icon className="agent-role-symbol" strokeWidth={1.7}/><span className="agent-emblem-status"/></span>
+  <span className="agent-emblem-frame">
+   <svg className="agent-machine" viewBox="0 0 100 108" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="50" cy="103" rx="36" ry="3" fill="#20354d" opacity=".12"/>
+    <path className="agent-shoulders" d="M12 99V88c0-9 7-16 16-18l13-4h18l13 4c9 2 16 9 16 18v11H12Z"/>
+    <path d="m31 72 8 27m30-27-8 27M19 86h9m44 0h9" stroke="currentColor" strokeWidth="1.5" opacity=".3"/>
+    <path d="M42 60h16v14H42z" fill="#718798" stroke="#435b6d" strokeWidth="1.5"/>
+    <path d="M44 65h12m-12 4h12" stroke="#bccbd4" strokeWidth="1.5"/>
+    <rect x="19" y="26" width="7" height="22" rx="3" fill="#8298a9"/>
+    <rect x="74" y="26" width="7" height="22" rx="3" fill="#8298a9"/>
+    <path className="agent-shell" d={leader?'M25 20 33 10h34l8 10v29c0 9-8 17-17 17H42c-9 0-17-8-17-17V20Z':'M25 24c0-8 6-14 14-14h22c8 0 14 6 14 14v25c0 9-8 17-17 17H42c-9 0-17-8-17-17V24Z'}/>
+    <path d="M35 16h30M34 58h32" stroke="currentColor" opacity=".25" strokeWidth="1.5"/>
+    <rect x="30" y="25" width="40" height="24" rx="7" fill="#142c3d" stroke="#607b8b" strokeWidth="1.5"/>
+    <path d="M34 30h29" stroke="#c2e7f2" strokeWidth="1.5" opacity=".15"/>
+    <path className="agent-sensor" d="M37 37h10m6 0h10" stroke="#a5dbe8" strokeWidth="3" strokeLinecap="round"/>
+    <path d="M46 54h8" stroke="currentColor" strokeWidth="2" opacity=".45"/>
+    {leader&&<path d="M40 6h20M50 3v7" stroke="#647e96" strokeWidth="2" strokeLinecap="round"/>}
+   </svg>
+   <span className="agent-task-module"><Icon className="agent-role-symbol" strokeWidth={1.8}/></span>
+   <span className="agent-emblem-status"/>
+  </span>
  </div>;
 }

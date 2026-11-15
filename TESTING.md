@@ -155,3 +155,11 @@ backend was restarted to activate the new routes. Preview uses mocked data:
 - Browser-verified the coordinator, weather, visualization and verification
   symbols in a saved simulation classroom; no paid model calls were made.
 - Generated role-symbol contact sheet is valid SVG XML.
+
+## Recognizable AI agent appearance — 15 November 2026
+
+- Replaced icon tiles with robotic busts and retained task-specific chest modules.
+- Browser-checked the mission introduction at the normal viewport: master and both
+  worker avatars fit their cards and show distinct coordinator/research/review roles.
+- Existing workflow and packet effects remain unchanged; active sensor animation
+  respects reduced motion. No model calls were required.
