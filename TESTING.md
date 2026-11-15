@@ -134,3 +134,15 @@ Test servers and their browser tab were closed afterward. No real paid planning
 request, execution or budget increase was made during these checks. The idle main
 backend was restarted to activate the new routes. Preview uses mocked data:
 `commander-approval-report-preview.png`.
+
+## Student classroom release — 15 November 2026
+
+- Backend: 156 tests passed using mocked providers; no paid model calls.
+- Frontend: 116 tests passed, including packet types, historical isolation,
+  pending-response state, all eight worker positions, student-mode defaults,
+  permission/revision routes and safe SVG history export.
+- TypeScript check and production build with `--base=/agentlab/` passed.
+- Browser checks used the isolated no-cost preview: message selection, recorded
+  contents, automatic/manual agent focus, replay, workbench navigation and the
+  illustrated history. SVG export was also generated and XML-validated directly.
+- Critical failure and recovery controls remain visible in the student view.

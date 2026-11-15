@@ -30,13 +30,14 @@ export function workspaceAgents(events:LabEvent[]) {
     const review=events.findLast(e=>e.type==='master.review_completed'&&e.payload.worker_id===row.agent_id&&e.sequence>=start);
     const question=openQuestions(events).findLast(e=>e.agent_id===row.agent_id);
     const last=own.at(-1), agent=agents.find(a=>a.id===row.agent_id);
-    const accepted=!!review?.payload.approved&&(!draft||review.sequence>draft.sequence||draft.type==='agent.output_accepted');
+    const submission=latest('agent.review_requested');
+    const accepted=!!review?.payload.approved&&(!submission||review.sequence>submission.sequence)&&(!draft||review.sequence>draft.sequence||draft.type==='agent.output_accepted'||!!latest('task.completed'));
     const status=question?'Needs your answer':accepted?'Task accepted':review&&!review.payload.approved?'Revision requested':draft?'Draft ready':agent?.state==='RUNNING'?'Working':['FAILED','CANCELLED','TERMINATED'].includes(agent?.state??'')?'Stopped':row.waits_for.length?'Waiting for input':'Ready';
     return {...row,agent,last,question,status,accepted,observe:attempt,plan:latest('agent.plan'),act:latest('agent.act'),test:latest('agent.test'),draft,review};
   });
 }
 
-const moments=new Set(['mission.clarification_requested','mission.clarification_answered','master.mission_understood','mission.plan_ready','task.assigned','agent.plan','agent.message_sent','agent.review_requested','master.review_completed','master.improved','master.final_approved','mission.completed','mission.failed','workspace.question_answered']);
+const moments=new Set(['mission.clarification_requested','mission.clarification_answered','master.mission_understood','mission.plan_ready','task.assigned','agent.input_received','agent.observe','agent.plan','agent.operation','agent.act','agent.test','agent.tool_completed','agent.output_accepted','agent.message_sent','agent.review_requested','master.review_completed','master.improved','master.final_approved','mission.completed','mission.failed','workspace.question_answered']);
 export const keyMoments=(events:LabEvent[])=>events.filter(e=>moments.has(e.type));
 
 export function sharedResult(events:LabEvent[]) {

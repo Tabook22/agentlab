@@ -21,6 +21,13 @@ test('questions remain open until an answer is explicitly linked to that questio
  expect(workspaceExchanges([q])[0]).toMatchObject({kind:'Question',from:'a',to:'master',text:'Which audience?'});
  expect(workspaceExchanges([e(4,'agent.message_sent',{message_type:'GUIDANCE',sender:'master',receiver:'a'})])[0].kind).toBe('Feedback');
 });
+
+test('a simulation tool completion after review keeps recorded task acceptance',()=>{
+ const events=[...base,e(3,'agent.observe',{cycle:1},'a'),e(4,'agent.review_requested',{},'a'),e(5,'master.review_completed',{worker_id:'a',approved:true}),e(6,'agent.tool_completed',{output:{mean:15}},'a'),e(7,'task.completed',{},'a')];
+ expect(workspaceAgents(events)[0].accepted).toBe(true);
+ events.push(e(8,'agent.review_requested',{},'a'));
+ expect(workspaceAgents(events)[0].accepted).toBe(false);
+});
 test('team completion does not imply recorded final approval',()=>{
  const events=[e(1,'master.improved',{output:{content:'First draft'}}),e(2,'mission.completed',{output:{content:'Delivered'}})];
  expect(sharedResult(events)).toMatchObject({approved:false,output:{content:'Delivered'}});
@@ -33,5 +40,5 @@ test('workspace renders recorded contributions and makes replay questions read-o
  for(const label of ['Agents working','Shared result','Questions &amp; decisions','Maya','Methods table','Needs your answer','Save answer','Replay key moments'])expect(html).toContain(label);
  const replay=renderToStaticMarkup(<AgentWorkspace events={events} status="FAILED" replay onInspect={()=>{}}/>);
  expect(replay).not.toContain('<textarea');expect(replay).toContain('read-only');
- expect(keyMoments([...events,e(5,'model.call_started')]).map(e=>e.sequence)).toEqual([4]);
+ expect(keyMoments([...events,e(5,'model.call_started')]).map(e=>e.sequence)).toEqual([3,4]);
 });

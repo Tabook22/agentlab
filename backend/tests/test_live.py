@@ -368,6 +368,54 @@ def test_multiple_assistant_messages_are_separate_json_documents(monkeypatch):
     assert result.title=='Final study plan' and result.content=='A proposed pilot.'
 
 
+def test_research_revision_has_room_for_a_complete_structured_plan(make_client):
+    client,requests=make_client(research=True,revise=True)
+    provider=client.app.state.runner.provider
+    original=provider.transport.handle_async_request
+
+    async def respond(request):
+        body=json.loads(request.content)
+        if body.get('text',{}).get('format',{}).get('name')=='WorkerProposal':
+            data=json.loads(body['input'])
+            if data['cycle']==2 and body['max_output_tokens']<2400:
+                return httpx.Response(200,json={'status':'incomplete',
+                    'incomplete_details':{'reason':'max_output_tokens'},
+                    'usage':{'input_tokens':100,'output_tokens':body['max_output_tokens']},
+                    'output':[]})
+        return await original(request)
+
+    provider.transport=httpx.MockTransport(respond)
+    key=start(client)
+    result=finish(client,key)
+    assert result['status']=='COMPLETED'
+    proposals=[r for r in requests if r.get('text',{}).get('format',{}).get('name')=='WorkerProposal']
+    assert [json.loads(r['input'])['cycle'] for r in proposals]==[1,2]
+
+
+@pytest.mark.parametrize('open_ended',[False,True])
+def test_incomplete_response_reports_its_limit_and_retains_usage(monkeypatch,open_ended):
+    monkeypatch.setenv('OPENAI_API_KEY','local-test-key')
+    monkeypatch.setenv('OPENAI_MODEL','gpt-5.4-mini')
+    requests=[]
+
+    def respond(request):
+        requests.append(request)
+        return httpx.Response(200,json={'status':'incomplete',
+            'incomplete_details':{'reason':'max_output_tokens'},
+            'usage':{'input_tokens':100,'output_tokens':1800},
+            'output':[{'type':'message','role':'assistant','content':[
+                {'type':'output_text','text':'PRIVATE_PARTIAL_RESPONSE'}]}]})
+
+    provider=OpenAIProvider(httpx.MockTransport(respond))
+    budget=RequestBudget(provider.limits,open_ended=open_ended)
+    with pytest.raises(LiveError,match='per-response output limit of 1,800 tokens') as error:
+        asyncio.run(provider.generate(FinalReport,'Public output only',{},budget))
+    assert len(requests)==1
+    assert budget.calls==1 and budget.tokens==1900 and budget.uncertain_requests==0
+    assert budget.cost==pytest.approx((100*.75+1800*4.5)/1_000_000)
+    assert 'PRIVATE_PARTIAL_RESPONSE' not in str(error.value)
+
+
 def test_research_provider_failure_does_not_trigger_paid_retry_cycles(make_client):
     client,requests=make_client(research=True)
     attempts=[]

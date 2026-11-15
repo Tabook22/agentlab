@@ -122,7 +122,7 @@ async def live_worker(runner,key,task_id,spec,mission_prompt,budget,max_iteratio
             emit(runner,key,'agent.progress',{'summary':'Reusing the saved public plan and draft instead of repeating completed work.','cycle':cycle,'status':'checking' if cached['artifact'] else 'working'},agent_id,task_id)
         else:
             proposal=await call(runner,key,WorkerProposal,WORKER,world,budget,
-                                f'{spec.name}: public plan for cycle {cycle}',agent_id,task_id,max_tokens=7000 if 'write_text' in spec.tools else 1800)
+                                f'{spec.name}: public plan for cycle {cycle}',agent_id,task_id,max_tokens=7000)
         if world['commander_guidance'] and not (cached and cached['proposal']):
             emit(runner,key,'agent.guidance_received',{'summary':'Read commander guidance for this cycle.','cycle':cycle,'guidance_ids':[row['id'] for row in world['commander_guidance']]},agent_id,task_id)
         emit(runner,key,'agent.plan',{'summary':proposal.action_summary,'cycle':cycle,

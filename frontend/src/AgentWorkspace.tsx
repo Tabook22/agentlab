@@ -9,6 +9,7 @@ import {useLanguage,translateText} from './i18n';
 import {ResearchSources} from './ResearchText';
 import {keyMoments,openQuestions,sharedResult,workspaceAgents,workspaceExchanges} from './workspace';
 import './workspace.css';
+import {AgentDataFlow} from './AgentDataFlow';
 
 type Props={events:LabEvent[];status:string;replay:boolean;onInspect:(id:string)=>void;onRecover?:()=>void;onAnswered?:()=>Promise<void>;onResult?:()=>void};
 function AnswerQuestion({question,onAnswered}:{question:LabEvent;onAnswered?:()=>Promise<void>}) {
@@ -63,6 +64,7 @@ export function AgentWorkspace({events,status,replay,onInspect,onRecover,onAnswe
  return <section className="agent-workspace" aria-label={ar?'مساحة عمل الفريق':'Team workspace'}>
   <div className="workspace-toolbar"><div><Users size={18}/><strong>{ar?'مساحة عمل الفريق':'Team workspace'}</strong><span>{replay||historical?(ar?'إعادة عرض مسجلة':'Recorded replay'):(ar?'من سجل المهمة':'From the mission record')}</span></div><button type="button" disabled={!moments.length} onClick={()=>{setPlaying(false);setCursor(historical?null:moments[0]?.sequence??null);}}><RotateCcw size={14}/>{historical?(ar?'العودة إلى أحدث نشاط':'Return to latest'):(ar?'أعد عرض اللحظات المهمة':'Replay key moments')}</button></div>
   {historical&&<div className="workspace-replay" aria-label="Key moment playback"><button type="button" aria-label="Previous key moment" disabled={index<=0} onClick={()=>{setPlaying(false);setCursor(moments[index-1].sequence);}}><ChevronLeft size={17}/></button><button type="button" aria-label={playing?'Pause key moments':'Play key moments'} disabled={index>=moments.length-1} onClick={()=>setPlaying(!playing)}>{playing?<Pause size={16}/>:<Play size={16}/>}</button><button type="button" aria-label="Next key moment" disabled={index>=moments.length-1} onClick={()=>{setPlaying(false);setCursor(moments[index+1].sequence);}}><ChevronRight size={17}/></button><span>{index+1} / {moments.length} · {ar?'السجل':'Record'} #{cursor}</span><p>{ar?'عرض تاريخي. لا تُرسل طلبات AI جديدة.':'Historical view. No new AI calls.'}</p></div>}
+  <AgentDataFlow events={visible} onInspect={historical?undefined:onInspect}/>
   <div className="workspace-columns"><section className="workspace-agents"><div className="workspace-section-title"><span>01</span><h3>{ar?'الوكلاء يعملون':'Agents working'}</h3><small>{workers.length}</small>{!historical&&<button type="button" onClick={()=>onInspect('master')}>{ar?'قابل القائد':'Meet the coordinator'}<ArrowRight size={13}/></button>}</div>
    <p className="workspace-caption">{ar?'سياق وخطط موجزة وأعمال وفحوص مسجّلة.':'Recorded context, public plans, work, and checks.'}</p>
    <div className="workspace-coordinator"><Robot leader small/><div><small>{ar?'الوكيل القائد':'MASTER AGENT'}</small><strong>{ar?'القائد الحكيم':'Thoughtful guide'}</strong><p>{ar?'هادئ · حاسم · مشجّع':'Calm · decisive · encouraging'}</p></div></div>

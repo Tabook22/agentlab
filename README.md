@@ -28,7 +28,10 @@ npm run dev
 ```
 
 Open the URL printed by Vite (normally http://127.0.0.1:5173; the current preview
-uses port 5174). `/api` is proxied to the loopback backend on port 8000.
+uses port 5174). `/api` is proxied to the loopback backend on port 8010.
+The local launcher uses 8010 to avoid conflicting with other applications on 8000.
+For a custom port, set `AGENT_LAB_PORT` for the backend and set
+`AGENT_LAB_API_TARGET=http://127.0.0.1:<port>` in `frontend/.env.local`.
 
 ## Configure the saved project key
 

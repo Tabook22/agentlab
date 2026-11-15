@@ -207,6 +207,8 @@ class OpenAIProvider:
             if body.get('status')!='completed':
                 reason=(body.get('incomplete_details') or {}).get('reason')
                 reason=reason if reason in ('max_output_tokens','content_filter') else 'unknown'
+                if reason=='max_output_tokens':
+                    raise LiveError(f'The model response was incomplete because it reached the per-response output limit of {output_tokens:,} tokens. Saved work is preserved. No automatic paid retry was made.')
                 raise LiveError(f'The model response was incomplete ({reason}). No automatic paid retry was made.')
             if not budget.open_ended and budget.cost>budget.limit_usd:
                 raise SpendingApprovalRequired(budget.limit_usd,budget.cost+.01)
