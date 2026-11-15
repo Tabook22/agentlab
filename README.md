@@ -202,13 +202,13 @@ is read-only. **Replay key moments** steps through saved events with no new AI c
 The original animated view remains available under **Mission map**.
 
 
-Agent avatars use scalable, local SVG artwork. The master has a dedicated gold and
-purple leader design; eight worker character styles follow the assigned role, with
-stable ID-based fallback for unfamiliar roles. Character names and traits are visual
-personality cues, available in English and Arabic. Active character motion follows
-recorded working state and respects reduced-motion settings. No new model calls or
-external avatar services are needed. To regenerate the artwork contact sheet, run
-`node scripts/avatar-preview.mjs` from `frontend`.
+Agents use simple professional role symbols: coordination, research, data preparation,
+analysis, weather, visualization, development, writing, planning, design, support and
+review. Unknown roles use a neutral symbol instead of an arbitrary specialty. Labels
+are available in English and Arabic. A subtle working indicator follows recorded
+activity and respects reduced-motion settings; workflow and message effects remain
+available. No model calls or external avatar services are needed. To regenerate the
+role-symbol contact sheet, run `node scripts/avatar-preview.mjs` from `frontend`.
 
 
 ## Clarification before delegation

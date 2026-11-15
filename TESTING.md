@@ -146,3 +146,12 @@ backend was restarted to activate the new routes. Preview uses mocked data:
   contents, automatic/manual agent focus, replay, workbench navigation and the
   illustrated history. SVG export was also generated and XML-validated directly.
 - Critical failure and recovery controls remain visible in the student view.
+
+## Professional agent symbols — 15 November 2026
+
+- Frontend: 118 tests passed, including role matching, Arabic labels, neutral
+  fallback symbols and existing activity indicators.
+- TypeScript check and production build with `--base=/agentlab/` passed.
+- Browser-verified the coordinator, weather, visualization and verification
+  symbols in a saved simulation classroom; no paid model calls were made.
+- Generated role-symbol contact sheet is valid SVG XML.
