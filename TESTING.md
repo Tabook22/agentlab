@@ -163,3 +163,19 @@ backend was restarted to activate the new routes. Preview uses mocked data:
   worker avatars fit their cards and show distinct coordinator/research/review roles.
 - Existing workflow and packet effects remain unchanged; active sensor animation
   respects reduced motion. No model calls were required.
+
+## Collaboration learning tools — 16 November 2026
+
+- Frontend: 123 tests passed. New cases cover actual message routing and payloads,
+  historical plan isolation, cycle isolation, failed checks/revisions/acceptance,
+  and English/Arabic rendering.
+- TypeScript check and production build with `--base=/agentlab/` passed.
+- Browser checks used the saved simulation on the isolated preview: participant
+  and type filters, follow-on-map receiver focus, return to latest, per-agent loop
+  evidence, task division, and on-demand message contents.
+- Exercised all six guided practice steps, incorrect/correct prediction feedback
+  and the prediction gate. Practice is visibly separate from real mission events.
+- Arabic task cards were checked in the narrow default browser viewport; the
+  collaboration section had equal client/scroll widths with no horizontal overflow.
+- Existing motion controls and reduced-motion preferences govern loop effects.
+  No paid model calls or backend behavior changes were needed.

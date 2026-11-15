@@ -202,6 +202,21 @@ is read-only. **Replay key moments** steps through saved events with no new AI c
 The original animated view remains available under **Mission map**.
 
 
+The Student classroom includes three connected collaboration tools:
+
+- Team conversation: filter recorded assignments, questions, ideas, feedback and
+  results by participant or message type; inspect contents and follow a message
+  on the map. New messages can be followed automatically.
+- Agent loop: inspect Observe, Decide, Act and Check, including recorded cycles,
+  review requests and revision feedback. Missing stages stay explicitly missing.
+- Task handoff lab: explore the master's task division, worker contracts,
+  dependencies, expected inputs/outputs, actual evidence and recorded responses.
+  A separate six-step local exercise teaches clarification and approval using
+  a missing source date. The exercise never modifies or runs a real mission.
+
+All three tools follow the classroom's selected historical step, support English
+and Arabic, and require no extra model calls to inspect a recording.
+
 Agents use professional robotic busts with metallic shells, sensor visors and
 small task-specific chest modules. The master has a distinct darker finish.
 Workers cover research, data preparation, analysis, weather, visualization,
