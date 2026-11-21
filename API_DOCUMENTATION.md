@@ -9,6 +9,7 @@ Interactive OpenAPI: `/docs` (backend port 8000).
 | POST | /api/missions | Start a simulation or request a live planning report, HTTP 201 |
 | POST | /api/missions/{id}/plan/approve | Approve the saved report and total budget; then create and run its workers |
 | POST | /api/missions/{id}/plan/decline | Decline the saved report without starting workers |
+| POST | /api/missions/{id}/plan/revise | Request a revised proposal; execution still requires fresh approval |
 | GET | /api/missions?trashed=false | Saved missions, newest first; use trashed=true for Trash |
 | PATCH | /api/missions/{id} | Edit saved title (1–200 characters) and notes (up to 2000 characters) |
 | DELETE | /api/missions/{id} | Move a stopped mission to recoverable Trash |
@@ -49,6 +50,15 @@ and reuses exactly the saved plan and IDs, preserving planning usage. Decline ta
 `{"plan_id":"event-id"}` and records cancellation. Duplicate/stale decisions return
 409. Both endpoints require loopback. Ordinary resume and budget approval do not
 bypass this gate. Existing previously executed missions retain their retry flow.
+
+Revision takes `{"plan_id":"event-id","instruction":"Use two workers and remove the quiz."}`.
+It requires the latest pending live report, no existing workers/tasks, and loopback access.
+The server records `mission.plan_revision_requested`, makes another paid planning request,
+and publishes a new report with updated estimates. The previous proposal and ordered user
+changes inform replanning; changes also remain in the execution context after approval.
+Planning usage accumulates across revisions. Stale reports cannot be approved or revised.
+Revisions never authorize worker creation. The UI displays the public approach, dependency
+handoffs and acceptance checks, then offers discussion, revision, approval or decline.
 
 ```json
 {"prompt":"Explain DNS for first-year students", "mode":"live", "max_workers":6, "max_iterations":3, "budget_usd":0.10}
@@ -123,6 +133,10 @@ not mission execution `usage`. Evidence sequence references are validated agains
 the actual supplied context. Chat has no execution tools and never changes
 mission status, plans, names, outputs or approval events. Provider errors do not
 automatically retry chat requests.
+
+While awaiting plan approval, a user can explicitly apply a saved chat request through
+the separate revision endpoint. Sending a chat message alone remains discussion only;
+the revision action requests paid replanning and still requires fresh execution consent.
 
 ## Final answer copy and document exports
 

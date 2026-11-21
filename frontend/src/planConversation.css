@@ -1,0 +1,31 @@
+.plan-conversation {margin:22px 0;color:#493e5e}
+.plan-conversation>header {display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.plan-conversation-avatar {display:grid;place-items:center;width:46px;height:46px;flex-shrink:0;border-radius:15px;background:#7652a3;color:white}
+.plan-conversation>header span:not(.plan-conversation-avatar) {font-size:9px;letter-spacing:1.2px;color:#756085}
+.plan-conversation h3 {font-size:20px;line-height:1.5;margin:4px 0 0;color:#443353}
+.plan-master-message {padding:20px 22px;border:1px solid #e1d9eb;border-radius:5px 18px 18px;background:#fff;margin:12px 0}
+.plan-master-message h4,.plan-handoff-heading {display:flex;align-items:center;gap:8px;font-size:14px;margin:0 0 9px;color:#59416e}
+.plan-master-message h4:not(:first-child) {margin-top:20px}
+.plan-master-message h4>span {font-size:11px;font-weight:400;color:#70627d;margin-inline-start:auto}
+.plan-approval-report .plan-master-message p {font-size:13px;color:#61586e;white-space:pre-wrap;overflow-wrap:anywhere;margin-top:7px}
+.plan-team-total {display:inline-flex;margin-top:12px;background:#f3edf9;color:#6e4c8a;border-radius:20px;padding:6px 11px;font-size:12px}
+.plan-handoff-heading {margin:22px 0 8px}.plan-handoff-heading h4 {margin:0;font-size:14px}
+.plan-proposed-route {list-style:none;padding:0;margin:0}
+.plan-proposed-route>li {display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;position:relative}
+.plan-proposed-route>li:not(:last-child):before {content:'';position:absolute;inset-inline-start:14px;top:42px;bottom:-16px;border-inline-start:1px dashed #cdbbde}
+.plan-route-number {display:grid;place-items:center;border:1px solid #d7c5e4;border-radius:50%;height:30px;background:#f4edf9;color:#7a539a;font-size:12px;margin-top:18px;z-index:1}
+.plan-proposed-route .plan-master-message {margin:8px 0}
+.plan-master-message dl {display:grid;grid-template-columns:100px minmax(0,1fr);gap:10px 14px;font-size:12px;line-height:1.8;margin:16px 0 0}
+.plan-master-message dt {color:#84738f}.plan-master-message dd {margin:0;white-space:pre-wrap;overflow-wrap:anywhere;color:#574f62}
+.plan-task-checks {border-top:1px solid #eee7f3;padding-top:12px;margin-top:14px;font-size:12px;color:#666071}
+.plan-task-checks ul {margin:7px 0 0;padding-inline-start:20px;line-height:1.9}
+.plan-final-check {background:#f2f8f4;border-color:#d6e7dc}.plan-final-check h4 {color:#3d7159}
+.plan-proposal-note {color:#74677f;font-size:12px!important}
+.plan-revision-form {background:#fff;border:1px solid #d8c8e6;border-radius:14px;padding:20px;margin-top:24px}
+.plan-revision-form h3 {font-size:18px;color:#503864;margin:0 0 7px}
+.plan-revision-form label {display:block;margin:15px 0 8px;font-size:13px;font-weight:600;color:#5b496c}
+.plan-revision-form textarea {width:100%;min-height:110px;resize:vertical;border:1px solid #d9cde4;border-radius:10px;padding:12px;background:#fdfbff;color:#4f405f;line-height:1.7}
+.plan-revision-form button {display:inline-flex;padding:11px 15px;border-radius:9px;background:#7652a3;color:#fff;margin-top:12px;font-size:13px}
+.plan-revision-form small {color:#7c6e87;margin-top:10px;font-size:11px;line-height:1.7}
+.plan-change-history {border:0!important;background:#faf6fe;padding:12px!important;border-radius:10px}.plan-change-history p {padding:10px;border-inline-start:2px solid #cdb6e0}
+@media(max-width:620px) {.plan-master-message{padding:15px}.plan-conversation h3{font-size:17px}.plan-proposed-route>li{grid-template-columns:24px minmax(0,1fr);gap:8px}.plan-route-number{height:24px}.plan-proposed-route>li:not(:last-child):before{inset-inline-start:11px}.plan-master-message dl{grid-template-columns:1fr;gap:4px}.plan-master-message dd{margin-bottom:10px}.plan-master-message h4{flex-wrap:wrap}.plan-revision-form{padding:15px}}

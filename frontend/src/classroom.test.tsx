@@ -53,9 +53,9 @@ test('student mode stays readable and keeps exact payloads behind an explicit ac
  expect(arabic).toContain('تابع الفكرة وهي تتحول إلى إجابة');
 });
 
-test('the mission opens in the student classroom and keeps detailed workspaces available',()=>{
+test('the mission opens on the team map and keeps the classroom available',()=>{
  const html=renderToStaticMarkup(<MissionTheater events={base} status="RUNNING" replay={false} replayPlaying={false} replaySpeed={1} onPauseReplay={()=>{}} onStart={()=>{}} onChooseMission={()=>{}} onShowPlan={()=>{}} canControl={false} onTogglePause={()=>{}}/>);
- expect(html).toContain('aria-label="Student classroom"');expect(html).toContain('Agent workbenches');
+ expect(html.match(/<button[^>]*aria-pressed="true"[^>]*>(.*?)<\/button>/s)?.[1]).toContain('Mission map');expect(html).toContain('Student classroom');expect(html).toContain('Agent workbenches');
  expect(html).not.toContain('aria-label="Team workspace"');
- expect(html).not.toContain('class="theater-now"');
+ expect(html).toContain('class="theater-now"');
 });

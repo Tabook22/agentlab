@@ -4,7 +4,7 @@ export type Agent = { id: string; config: { name: string; role: string; instruct
 // Prefer its recorded state so reconnecting after the last event cannot miss a user turn.
 export function recordedMissionStatus(events:LabEvent[],fallback:string):string {
   const states:Record<string,string>={
-    'mission.planning':'RUNNING','mission.retry_requested':'RUNNING','mission.execution_opened':'RUNNING',
+    'mission.plan_revision_requested':'RUNNING','mission.planning':'RUNNING','mission.retry_requested':'RUNNING','mission.execution_opened':'RUNNING',
     'mission.clarification_requested':'AWAITING_CLARIFICATION','mission.clarification_answered':'RUNNING',
     'mission.plan_approval_requested':'AWAITING_APPROVAL','mission.plan_approved':'RUNNING',
     'mission.limit_approval_requested':'AWAITING_LIMIT_APPROVAL','mission.pause':'PAUSED','mission.resume':'RUNNING',

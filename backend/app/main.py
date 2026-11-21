@@ -75,6 +75,11 @@ class PlanDeclineRequest(BaseModel):
     plan_id: str = Field(min_length=1,max_length=100)
 
 
+class PlanRevisionRequest(BaseModel):
+    plan_id: str = Field(min_length=1,max_length=100)
+    instruction: str = Field(min_length=1,max_length=3000)
+
+
 def serialize(row):
     return {column.name: getattr(row, column.name) for column in row.__table__.columns}
 
@@ -206,6 +211,29 @@ def create_app(url=None, delay=None, provider=None):
         with sessions() as db:
             require(db, key)
             return [serialize(e) for e in db.scalars(select(Event).where(Event.mission_id == key, Event.sequence > after).order_by(Event.sequence))]
+
+    @app.post('/api/missions/{key}/plan/revise')
+    async def revise_plan(key: str,body: PlanRevisionRequest,request: Request):
+        require_local(request)
+        instruction=body.instruction.strip()
+        if not instruction:raise HTTPException(422,'Describe what you would like to change.')
+        if runner.live_jobs or len(runner.jobs)>=4 or key in runner.jobs:
+            raise HTTPException(409,'Wait for active work to finish before revising the plan.')
+        with sessions() as db:
+            mission=require(db,key)
+            pending=db.scalar(select(Event).where(Event.mission_id==key,Event.type=='mission.plan_approval_requested').order_by(Event.sequence.desc()).limit(1))
+            if mission.mode!='live' or mission.status!='AWAITING_APPROVAL' or not pending or pending.id!=body.plan_id:
+                raise HTTPException(409,'This plan is no longer awaiting review. Refresh the mission report.')
+            if db.scalar(select(Agent.id).where(Agent.mission_id==key).limit(1)) or db.scalar(select(Task.id).where(Task.mission_id==key).limit(1)):
+                raise HTTPException(409,'A pre-execution revision cannot change a mission with existing workers.')
+            options={**pending.payload['options'],'budget_usd':pending.payload['estimate']['current_total_limit_usd'],'carry_usage':True}
+            mission.status='RUNNING'
+            runner.emit(db,key,'mission.plan_revision_requested',{
+                'summary':'Your requested changes are saved. The master will propose a revised plan; workers remain unapproved.',
+                'plan_id':pending.id,'instruction':instruction,'source':'user','status':'RUNNING'})
+            result=serialize(mission)
+        runner.start(key,'live',options)
+        return {'mission':result,'resumed':True}
 
     @app.post('/api/missions/{key}/plan/approve')
     async def approve_plan(key: str,body: PlanApprovalRequest,request: Request):

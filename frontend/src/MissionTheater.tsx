@@ -16,7 +16,7 @@ import {Translate,useLanguage} from './i18n';
 import './theater.css';
 
 export function MissionTheater({events,status,replay,replayPlaying,replaySpeed,onPauseReplay,onStart,onChooseMission,onShowPlan,canControl,onTogglePause,onRename,onRecover,onDiscuss,onAnswered,onResult}:{events:LabEvent[];status:string;replay:boolean;replayPlaying:boolean;replaySpeed:number;onPauseReplay:()=>void;onStart:()=>void;onChooseMission:()=>void;onShowPlan:()=>void;canControl:boolean;onTogglePause:()=>void;onRename?:(id:string,name:string)=>Promise<void>;onRecover?:()=>void;onDiscuss?:()=>void;onAnswered?:()=>Promise<void>;onResult?:()=>void}){
- const [scene,setScene]=useState<'classroom'|'team'|'blueprint'|'map'>(status==='AWAITING_APPROVAL'?'blueprint':'classroom');
+ const [scene,setScene]=useState<'classroom'|'team'|'blueprint'|'map'>(status==='AWAITING_APPROVAL'?'blueprint':'map');
  const [selected,setSelected]=useState<string|null>(null);
  const {language}=useLanguage();const ar=language==='ar';
  const plan=planFrom(events),agents=agentsFrom(events),progress=missionProgress(events);

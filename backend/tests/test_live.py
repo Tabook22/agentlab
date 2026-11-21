@@ -27,7 +27,7 @@ def test_rejected_key_is_sanitized_and_has_no_reported_usage(monkeypatch):
     assert provider.connected is False
 
 
-def mock_transport(workers=1,revise=False,bad_graph=False,blocked_tool=False,delay=0,research=False,master_help=False,worker_help=False,final_fail=False,final_revise=False,master_help_rounds=0):
+def mock_transport(workers=1,revise=False,bad_graph=False,blocked_tool=False,delay=0,research=False,master_help=False,worker_help=False,final_fail=False,final_revise=False,master_help_rounds=0,replanned_workers=None):
     requests=[]
     async def respond(request):
         assert request.headers['authorization']=='Bearer local-test-key'
@@ -45,7 +45,8 @@ def mock_transport(workers=1,revise=False,bad_graph=False,blocked_tool=False,del
                         'annotations':[{'type':'url_citation','start_index':15,'end_index':18,'url':'https://example.org/study','title':'Tracking study'}]}]}]})
         purpose=body['text']['format']['name'];data=json.loads(body['input'])
         if purpose=='LiveMissionPlan':
-            result={'help_request':'','count_reason':f'This mission has {workers} distinct useful responsibilities.',
+            team_size=replanned_workers if data.get('previous_proposal') and replanned_workers is not None else workers
+            result={'help_request':'','count_reason':f'This mission has {team_size} distinct useful responsibilities.',
                 'fewer_agents':'Fewer could combine responsibilities where appropriate.',
                 'more_agents':'More would duplicate the bounded work.','scope':'Answer the actual mission using scoped workers.',
                 'success_criteria':'All delegated outputs meet their rubrics.',
@@ -53,7 +54,7 @@ def mock_transport(workers=1,revise=False,bad_graph=False,blocked_tool=False,del
                     'instructions':f'Explain aspect {i+1} of the mission.', 'why_separate':'This is a distinct requested deliverable.',
                     'expected_output':'A useful short explanation.','input_description':'The mission and assigned predecessor outputs.',
                     'dependencies':([0] if bad_graph else []) if i==0 else [i-1],
-                    'tools':['write_text'],'acceptance_criteria':['Contains useful content']} for i in range(workers)]}
+                    'tools':['write_text'],'acceptance_criteria':['Contains useful content']} for i in range(team_size)]}
         elif purpose=='WorkerProposal':
             result={'observation_summary':'The mission and dependency artifacts are available in my scoped context.',
                 'public_plan':['Write the assigned explanation.','Check it against the acceptance criterion.'],
@@ -154,6 +155,51 @@ def test_plan_requires_consent_before_any_workers_and_reuses_exact_plan(make_cli
     assert [a['id'] for a in result['agents']]==report['payload']['agent_ids']
     assert sum(r['text']['format']['name']=='LiveMissionPlan' for r in requests)==1
     assert client.post(f'/api/missions/{key}/plan/approve',json={'plan_id':report['id'],'total_budget_usd':.20}).status_code==409
+
+
+def test_revised_plan_requires_fresh_consent_and_preserves_feedback_and_usage(make_client):
+    client,requests=make_client(workers=3,replanned_workers=2)
+    key=start(client,approve_plan=False)
+    _,original=wait_for_report(client,key)
+    feedback='Use two workers, remove the quiz, and compare sources before writing.'
+    revised=client.post(f'/api/missions/{key}/plan/revise',json={'plan_id':original['id'],'instruction':feedback})
+    assert revised.status_code==200,revised.text
+    mission,proposal=wait_for_report(client,key)
+    assert proposal['id']!=original['id']
+    assert mission['agents']==[] and mission['tasks']==[]
+    assert proposal['payload']['report']['worker_count']==2
+    assert proposal['payload']['estimate']['planning_usage']['calls']==2
+    assert proposal['payload']['estimate']['planning_usage']['estimated_cost_usd']>original['payload']['estimate']['planning_usage']['estimated_cost_usd']
+    planning=json.loads(requests[1]['input'])
+    assert feedback in planning['mission']
+    assert len(planning['previous_proposal']['tasks'])==3
+    assert client.post(f'/api/missions/{key}/plan/approve',json={'plan_id':original['id'],'total_budget_usd':.20}).status_code==409
+    assert client.post(f'/api/missions/{key}/plan/revise',json={'plan_id':original['id'],'instruction':'Ignore this stale request'}).status_code==409
+    assert len(requests)==2
+    assert client.post(f'/api/missions/{key}/plan/approve',json={'plan_id':proposal['id'],'total_budget_usd':.20}).status_code==200
+    result=finish(client,key)
+    assert result['status']=='COMPLETED'
+    assert len(result['agents'])==2
+    assert {a['id'] for a in result['agents']}==set(proposal['payload']['agent_ids'])
+    worker_inputs=[json.loads(r['input']) for r in requests if r['text']['format']['name']=='WorkerProposal']
+    assert all(feedback in row['mission'] for row in worker_inputs)
+    assert client.post(f'/api/missions/{key}/plan/revise',json={'plan_id':proposal['id'],'instruction':'Change executed work'}).status_code==409
+
+
+def test_revisions_reject_blank_input_and_keep_all_review_rounds(make_client):
+    client,requests=make_client()
+    key=start(client,approve_plan=False)
+    _,original=wait_for_report(client,key)
+    assert client.post(f'/api/missions/{key}/plan/revise',json={'plan_id':original['id'],'instruction':'  '}).status_code==422
+    assert len(requests)==1
+    for instruction in ['Add a quiz.','Remove the quiz; keep the explanation.']:
+        assert client.post(f'/api/missions/{key}/plan/revise',json={'plan_id':original['id'],'instruction':instruction}).status_code==200
+        _,original=wait_for_report(client,key)
+    prompt=json.loads(requests[-1]['input'])['mission']
+    assert prompt.index('Add a quiz.')<prompt.index('Remove the quiz; keep the explanation.')
+    assert client.get(f'/api/missions/{key}').json()['agents']==[]
+    events=client.get(f'/api/missions/{key}/events').json()
+    assert len([e for e in events if e['type']=='mission.plan_revision_requested'])==2
 
 
 def test_declining_a_plan_preserves_planning_usage_without_execution(make_client):

@@ -16,9 +16,14 @@ def clarification_history(db,key):
 
 def clarified_mission(db,mission):
     history=clarification_history(db,mission.id)
-    if not history:return mission.prompt
-    return mission.prompt+'\n\nUser-confirmed mission clarifications:\n'+'\n\n'.join(
+    prompt=mission.prompt
+    if history:prompt+='\n\nUser-confirmed mission clarifications:\n'+'\n\n'.join(
         f"Question: {row['question']}\nUser answer: {row['answer']}" for row in history)
+    revisions=list(db.scalars(select(Event).where(Event.mission_id==mission.id,
+        Event.type=='mission.plan_revision_requested').order_by(Event.sequence)))
+    if revisions:prompt+='\n\nUser-requested plan changes (in order; later changes supersede conflicting earlier ones):\n'+'\n\n'.join(
+        f"{i+1}. {event.payload['instruction']}" for i,event in enumerate(revisions))
+    return prompt
 
 
 class ClarificationAnswer(BaseModel):

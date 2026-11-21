@@ -1,0 +1,93 @@
+/* One surface carries the goal, proposed plan, live team and finished answer. */
+.mission-workspace {
+ --workspace-accent:#7652a3;
+ border:1px solid #dfdce9;
+ border-radius:24px;
+ background:#fff;
+ box-shadow:0 12px 40px #43376008;
+ margin-bottom:24px;
+ min-width:0;
+ transition:border-color .3s ease,box-shadow .3s ease;
+}
+.mission-workspace.workspace-answer {--workspace-accent:#34785f;border-color:#cddfd6}
+.mission-workspace>.mission-journey {
+ border:0;
+ border-radius:23px 23px 0 0;
+ margin:0;
+ padding:30px 30px 22px;
+ box-shadow:none;
+ border-bottom:1px solid #e6e1ef;
+ transition:padding .3s ease,background-color .3s ease;
+}
+.mission-workspace>.mission-journey.has-mission {padding:18px 24px 14px;background:#faf8fd}
+.mission-workspace.workspace-answer>.mission-journey {background:linear-gradient(110deg,#f0f8f3,#f9fbfa)}
+.mission-workspace .has-mission .journey-intro>div:first-child {grid-template-columns:minmax(0,1fr) auto;gap:0 16px}
+.mission-workspace .has-mission .journey-kicker {grid-column:1;grid-row:1;font-size:9px;letter-spacing:1.2px;color:#736480}
+.mission-workspace .has-mission .journey-intro h1 {grid-row:2;font-size:21px!important;margin:5px 0 0!important;line-height:1.4}
+.mission-workspace .has-mission .journey-next-action {grid-row:1/3;padding:10px 14px;font-size:12px;box-shadow:none;background:var(--workspace-accent)}
+.mission-workspace .has-mission .journey-goal {margin-top:10px;background:transparent;border:0;border-radius:0}
+.mission-workspace .has-mission .journey-goal summary {padding:4px 0;color:#625a70;font-size:12px}
+.mission-workspace .has-mission .journey-goal>p {padding:8px 0;max-width:850px;color:#625a70}
+.mission-workspace .has-mission .journey-shortcuts {margin-top:14px;gap:0;border-top:1px solid #e6e1ed;padding-top:10px}
+.mission-workspace .has-mission .journey-step {position:relative;background:transparent;border:0;box-shadow:none;border-radius:8px;padding:9px 12px;flex-direction:row;gap:9px;text-align:start}
+.mission-workspace .has-mission .journey-step small {display:none}
+.mission-workspace .has-mission .journey-step-icon {width:28px;height:28px;border-radius:8px;background:#ece8f2;color:#776a89}
+.mission-workspace .has-mission .journey-step-icon svg {width:16px;height:16px}
+.mission-workspace .has-mission .journey-step strong {font-size:12px;color:#655b72}
+.mission-workspace .has-mission .journey-step.is-selected {background:#fff;box-shadow:0 2px 8px #47345f0a}
+.mission-workspace .has-mission .journey-step.is-selected:after {content:'';position:absolute;inset-inline:12px;bottom:0;height:2px;border-radius:2px;background:var(--workspace-accent)}
+.mission-workspace .has-mission .journey-step.is-selected .journey-step-icon {color:#fff;background:var(--workspace-accent)}
+.mission-workspace .has-mission .journey-step:disabled {opacity:.5}
+.mission-workspace .has-mission .journey-step-arrow {width:12px}
+.mission-workspace .has-mission .journey-tools {margin-top:9px;padding-top:10px;border:0;gap:10px}
+.mission-workspace .has-mission .journey-actions>button,.mission-workspace .has-mission .journey-more>summary {padding:7px 9px}
+.mission-workspace .has-mission .journey-more {padding:0;border:0}
+.mission-workspace-content {padding:24px;min-width:0}
+.mission-workspace-content>.panel,
+.mission-workspace-content>.workspace-grid>.lab-panel {border:0;box-shadow:none;border-radius:0;margin:0;padding:0}
+.mission-workspace-content>.workspace-grid {margin:0;gap:0}
+.mission-workspace-content>.mission-saved-sources {margin-top:0;margin-bottom:18px}
+.mission-workspace-content .journey-overview .mission-theater {padding:0;background:transparent}
+.mission-workspace-content .journey-overview .journey-view-heading {display:none}
+.mission-workspace-content .theater-scene-switch {padding:4px;background:#f5f4f8;border:1px solid #ebe7f0;border-radius:12px;display:flex;gap:4px;flex-wrap:wrap;margin-bottom:18px}
+.mission-workspace-content .theater-scene-switch button {border:0;background:transparent;box-shadow:none;border-radius:8px;padding:10px 13px;color:#71677d}
+.mission-workspace-content .theater-scene-switch button[aria-pressed=true] {background:#fff;color:#58416e;box-shadow:0 2px 6px #49345e0b}
+.mission-workspace-content .theater-stage {border-color:#e7e2ee}
+.mission-workspace-content .mission-theater>.theater-now {margin:12px 0 16px;padding:12px 14px;gap:12px}
+.mission-workspace-content .theater-now h3 {font-size:16px}
+.mission-workspace-content .theater-now p {font-size:12px;margin-top:3px}
+.mission-workspace-content .theater-now .theater-eyebrow {display:none}
+.mission-workspace-content .theater-now-icon {width:34px;height:34px}
+.mission-workspace-content .result>.panel-heading {margin-top:0}
+.mission-workspace-content .mission-entry-heading h2 {font-size:20px}
+.mission-workspace-content .mission-entry-heading p {color:#6e667c}
+.mission-workspace-content .mission-entry textarea#mission {min-height:145px;background:#fdfcfe;border-color:#dcd4e6;border-radius:14px;transition:border-color .2s,box-shadow .2s}
+.mission-workspace-content .mission-entry textarea#mission:focus {border-color:#9474b4;outline:0;box-shadow:0 0 0 3px #9474b414}
+@media(min-width:1200px) {
+ .mission-workspace>.mission-journey.has-mission {display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:20px}
+ .mission-workspace .has-mission .journey-intro,.mission-workspace .has-mission .journey-goal {grid-column:1/-1}
+ .mission-workspace .has-mission .journey-tools {margin-top:14px;padding-top:10px;border-top:1px solid #e6e1ed;flex-wrap:nowrap}
+ .mission-workspace .has-mission .journey-status {white-space:nowrap}
+ .mission-workspace .has-mission .journey-actions {flex-wrap:nowrap}
+}
+@media(max-width:850px) {
+ .mission-workspace .has-mission .journey-tools {flex-direction:row;align-items:center}
+ .mission-workspace .has-mission .journey-actions {width:auto;margin-inline-start:auto}
+ .mission-workspace .has-mission .journey-cost {margin:0}
+}
+@media(max-width:620px) {
+ .mission-workspace {border-radius:18px}
+ .mission-workspace>.mission-journey {padding:22px 16px 16px;border-radius:17px 17px 0 0}
+ .mission-workspace>.mission-journey.has-mission {padding:16px 14px 12px}
+ .mission-workspace .has-mission .journey-intro>div:first-child {display:block}
+ .mission-workspace .has-mission .journey-next-action {margin-top:10px;width:100%;justify-content:space-between}
+ .mission-workspace .has-mission .journey-step {justify-content:center;flex-direction:column;gap:5px;padding:9px 3px;text-align:center}
+ .mission-workspace .has-mission .journey-step strong {font-size:11px}
+ .mission-workspace .has-mission .journey-step-arrow {display:none}
+ .mission-workspace .has-mission .journey-actions {width:100%;margin:0}
+ .mission-workspace-content {padding:18px 14px}
+ .mission-workspace-content .theater-scene-switch button {flex:1 1 40%;justify-content:center;font-size:11px;padding:9px 7px}
+}
+@media(prefers-reduced-motion:reduce) {
+ .mission-workspace,.mission-workspace>.mission-journey,.mission-workspace-content .mission-entry textarea#mission {transition:none}
+}
