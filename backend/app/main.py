@@ -87,6 +87,9 @@ def serialize(row):
 def create_app(url=None, delay=None, provider=None):
     load_backend_environment()
     engine, sessions = database(url)
+    from .provider_settings import key_file_for, load_saved_key, provider_settings_router
+    key_file=key_file_for(engine)
+    load_saved_key(key_file)
     runner = Orchestrator(sessions, delay, provider or OpenAIProvider())
 
     @asynccontextmanager
@@ -105,8 +108,15 @@ def create_app(url=None, delay=None, provider=None):
         engine.dispose()
 
     app = FastAPI(title='AI Agent Lab', lifespan=lifespan)
+    @app.middleware('http')
+    async def private_provider_settings(request,call_next):
+        response=await call_next(request)
+        if request.url.path.startswith('/api/settings/provider'):
+            response.headers['Cache-Control']='no-store'
+        return response
     app.state.sessions = sessions
     app.state.runner = runner
+    app.include_router(provider_settings_router(runner,key_file))
     app.include_router(voice_router(transport=runner.provider.transport))
 
     def history_metadata(db,key):
@@ -139,7 +149,7 @@ def create_app(url=None, delay=None, provider=None):
             if request.client and request.client.host not in ('127.0.0.1','::1','testclient'):
                 raise HTTPException(403,'Live AI is available only from loopback until classroom authentication is implemented.')
             if not provider_status()['key_present']:
-                raise HTTPException(400,'Configure OPENAI_API_KEY in backend/.env and restart the backend first.')
+                raise HTTPException(400,'Add your OpenAI API key in Lab settings before starting Live AI.')
             if runner.live_jobs:
                 raise HTTPException(429,'One live mission is already active. Finish or cancel it first.')
         if len(runner.jobs) >= 4:

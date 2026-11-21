@@ -8,6 +8,7 @@ __pycache__/
 *.tsbuildinfo
 *.db
 .env
+.secrets/
 *.log
 
 tmp/export-qa/

@@ -35,6 +35,19 @@ return 404 on execution/read endpoints until restored. Deletion never runs a
 mission or resets its budget. The UI's **Edit & run again** opens the original
 prompt in the composer; creating a new run requires pressing its launch button.
 
+## Write-only administrator provider key
+
+`PUT /api/settings/provider/key` accepts `{"api_key":"sk-..."}` from the admin
+form with `Content-Type: application/json`, the same-site `Origin`, and
+`X-Admin-Action: update-provider-key`. It saves the key atomically in the private
+server credential file and makes it available immediately. Responses contain
+provider availability only, never the key or a key fragment; provider settings
+responses use `Cache-Control: no-store`. Saving makes no provider request.
+Blank, malformed, oversized and cross-origin submissions are rejected without
+echoing the credential. Active Live AI missions block rotation with HTTP 409.
+Local access is allowed; remote access requires the explicitly configured
+authenticated, HTTPS, loopback Nginx deployment described in the deployment guide.
+
 ## Live mission request
 
 Live missions first perform one paid commander planning request, then persist
