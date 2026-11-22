@@ -1,6 +1,24 @@
 # Instructor guide
 
-> Current implementation (27 October 2026): live mission-based orchestration is now available locally. See [LIVE_ORCHESTRATION.md](LIVE_ORCHESTRATION.md) for the current loop, schema, limits and scope. Earlier simulation descriptions below apply to Simulation mode. Public deployment/authentication remain pending.
+> The Learning Center starts with an eight-step Agent Foundations roadmap in English and Arabic. The examples in that roadmap are local teaching activities, separate from live mission records. See [LIVE_ORCHESTRATION.md](LIVE_ORCHESTRATION.md) for execution details. Older scenario-specific exercises below describe Simulation mode.
+
+## Agent foundations roadmap
+
+Open **Learning center** and select any step, or mark each reviewed and continue:
+
+1. **Is an LLM an agent?** Distinguish the response-generating model, a controlled workflow, an agent system, and a team.
+2. **What turns a model into an agent?** Assemble a goal, instructions, context, tools, a harness and loop, and feedback/stopping rules. Creating a worker configures a role; it does not train a new model.
+3. **What is a task?** Identify the owner, inputs, output, acceptance criteria, and dependencies.
+4. **How do tools work?** Follow a requested action through permission checks, execution, and its returned result. Distinguish actual actions from claims.
+5. **What is the agent loop?** Step through a library-plan draft that omits returns, receives feedback, is revised, and is checked again.
+6. **What is the harness?** Explain the runtime around the model, including context, state, tool dispatch, permissions, logging and control. The current open-ended mode displays estimated costs without an app spending cap.
+7. **How does the master coordinate agents?** Explore clarification, discussion, a proposed team, user approval, explicit handoffs, review feedback, correction and final approval. The three-worker teaching example is not a default team size.
+8. **Read a mission like an engineer.** Prepare the free recovery simulation, then launch it yourself to inspect real saved events. This action never starts a paid mission.
+
+Each step includes a definition, an example, an Agent Lab connection, and a knowledge check with feedback. Review markers last only while the Learning Center remains open. Activities do not call the API or create workers. The operational user guide and current mission explanation remain available below the roadmap.
+
+General terminology references: [OpenAI’s practical guide](https://openai.com/business/guides-and-resources/a-practical-guide-to-building-ai-agents/), [Anthropic’s agent/workflow distinction](https://www.anthropic.com/research/building-effective-agents), and [Anthropic’s harness discussion](https://www.anthropic.com/research/effective-harnesses-for-long-running-agents).
+
 
 ## First experiment: follow the data
 
