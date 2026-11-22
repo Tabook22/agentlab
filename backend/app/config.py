@@ -21,5 +21,5 @@ def provider_status():
         'model': os.getenv('OPENAI_MODEL','gpt-5.4-mini'),
         'limits': asdict(LiveLimits()),
         'tools': ['write_text','calculate','inspect_context','web_research'],
-        'access': 'loopback-only',
+        'access': 'loopback-or-authenticated-proxy' if os.getenv('AGENT_LAB_ADMIN_ORIGIN','') else 'loopback-only',
     }

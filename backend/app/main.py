@@ -17,6 +17,7 @@ from dataclasses import asdict
 from .voice import voice_router
 from types import SimpleNamespace
 from .plan_approval import estimate_plan
+from .access import require_admin
 
 
 class InstructionRequest(BaseModel):
@@ -146,8 +147,7 @@ def create_app(url=None, delay=None, provider=None):
         if body.mode=='live':
             if not body.open_ended and body.budget_usd>runner.provider.limits.max_budget_usd:
                 raise HTTPException(422,'The selected allowance exceeds the server admin ceiling.')
-            if request.client and request.client.host not in ('127.0.0.1','::1','testclient'):
-                raise HTTPException(403,'Live AI is available only from loopback until classroom authentication is implemented.')
+            require_admin(request)
             if not provider_status()['key_present']:
                 raise HTTPException(400,'Add your OpenAI API key in Lab settings before starting Live AI.')
             if runner.live_jobs:
@@ -336,8 +336,7 @@ def create_app(url=None, delay=None, provider=None):
 
     @app.post('/api/missions/{key}/agents/{agent_id}/guidance',status_code=201)
     async def guidance(key: str,agent_id: str,body: InstructionRequest,request: Request):
-        if request.client and request.client.host not in ('127.0.0.1','::1','testclient'):
-            raise HTTPException(403,'Commander guidance is available only from loopback.')
+        require_admin(request)
         with sessions() as db:
             mission=require(db,key);agent=db.get(Agent,agent_id)
             if not agent or agent.mission_id!=key:
@@ -353,8 +352,7 @@ def create_app(url=None, delay=None, provider=None):
 
     @app.post('/api/missions/{key}/questions/{question_id}/answer',status_code=201)
     async def answer_question(key: str,question_id: str,body: QuestionAnswerRequest,request: Request):
-        if request.client and request.client.host not in ('127.0.0.1','::1','testclient'):
-            raise HTTPException(403,'Answering worker questions is available only from loopback.')
+        require_admin(request)
         text=body.instruction.strip()
         if not text:raise HTTPException(422,'Write an answer first.')
         with sessions() as db:
@@ -380,8 +378,7 @@ def create_app(url=None, delay=None, provider=None):
             return serialize(event)
 
     def require_local(request):
-        if request.client and request.client.host not in ('127.0.0.1','::1','testclient'):
-            raise HTTPException(403,'Budget administration is available only from loopback.')
+        require_admin(request)
 
     @app.post('/api/missions/{key}/execution/open')
     async def open_execution(key: str,request: Request):
@@ -557,8 +554,7 @@ def create_app(url=None, delay=None, provider=None):
 
     @app.post('/api/missions/{key}/retry')
     async def retry(key: str,request: Request,extend_cycles: bool=False):
-        if request.client and request.client.host not in ('127.0.0.1','::1','testclient'):
-            raise HTTPException(403,'Live retry is available only from loopback.')
+        require_admin(request)
         if not provider_status()['key_present']:
             raise HTTPException(400,'Configure the backend key first.')
         if runner.live_jobs or len(runner.jobs)>=4:

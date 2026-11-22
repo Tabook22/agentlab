@@ -7,6 +7,7 @@ import re
 import tempfile
 from fastapi import APIRouter, HTTPException, Request
 from .config import provider_status
+from .access import require_admin
 
 
 def key_file_for(engine):
@@ -48,11 +49,7 @@ def provider_settings_router(runner,path):
         origin=request.headers.get('origin','')
         local_origin=str(request.base_url).rstrip('/')
         proxy_origin=os.getenv('AGENT_LAB_ADMIN_ORIGIN','').rstrip('/')
-        proxied=bool(proxy_origin and origin==proxy_origin and
-            request.headers.get('x-forwarded-proto')=='https' and
-            'https://'+request.headers.get('host','')==proxy_origin)
-        local=bool(request.client and request.client.host in ('127.0.0.1','::1','testclient'))
-        if not local and not proxied:raise HTTPException(403,'Administrator access is required.')
+        require_admin(request)
         if request.headers.get('x-admin-action')!='update-provider-key' or origin not in {local_origin,proxy_origin} or not origin:
             raise HTTPException(403,'Save the key from this app’s admin settings.')
         if request.headers.get('content-type','').split(';')[0]!='application/json':

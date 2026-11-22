@@ -157,6 +157,45 @@ def test_plan_requires_consent_before_any_workers_and_reuses_exact_plan(make_cli
     assert client.post(f'/api/missions/{key}/plan/approve',json={'plan_id':report['id'],'total_budget_usd':.20}).status_code==409
 
 
+def test_authenticated_proxy_can_plan_revise_and_approve(make_client,monkeypatch):
+    monkeypatch.setenv('AGENT_LAB_ADMIN_ORIGIN','https://admin.example')
+    local,requests=make_client()
+    # Use the public client address supplied by Uvicorn's trusted proxy handling.
+    with TestClient(local.app,client=('203.0.113.7',5000),headers={
+        'host':'admin.example','x-forwarded-proto':'https','origin':'https://admin.example',
+    }) as remote:
+        key=start(remote,approve_plan=False)
+        mission,report=wait_for_report(remote,key)
+        assert mission['agents']==[] and len(requests)==1
+        assert remote.get(f'/api/missions/{key}/master/chat').status_code==200
+        revision=remote.post(f'/api/missions/{key}/plan/revise',json={
+            'plan_id':report['id'],'instruction':'Keep the answer concise.'})
+        assert revision.status_code==200,revision.text
+        _,report=wait_for_report(remote,key)
+        approved=remote.post(f'/api/missions/{key}/plan/approve',json={
+            'plan_id':report['id'],'total_budget_usd':.20})
+        assert approved.status_code==200,approved.text
+        assert finish(remote,key)['status']=='COMPLETED'
+
+
+@pytest.mark.parametrize('configured,headers',[
+    (False,{'host':'admin.example','x-forwarded-proto':'https','origin':'https://admin.example'}),
+    (True,{'host':'admin.example','x-forwarded-proto':'https'}),
+    (True,{'host':'admin.example','x-forwarded-proto':'https','origin':'https://other.example'}),
+    (True,{'host':'other.example','x-forwarded-proto':'https','origin':'https://admin.example'}),
+    (True,{'host':'admin.example','x-forwarded-proto':'http','origin':'https://admin.example'}),
+    (True,{}),
+])
+def test_remote_planning_rejects_untrusted_requests_without_model_calls(make_client,monkeypatch,configured,headers):
+    local,requests=make_client()
+    monkeypatch.setenv('AGENT_LAB_ADMIN_ORIGIN','https://admin.example' if configured else '')
+    with TestClient(local.app,client=('203.0.113.7',5000),headers=headers) as remote:
+        response=remote.post('/api/missions',json={'prompt':'Explain educational agents.','mode':'live'})
+        assert response.status_code==403,response.text
+        assert requests==[]
+        assert remote.get('/api/missions').json()==[]
+
+
 def test_revised_plan_requires_fresh_consent_and_preserves_feedback_and_usage(make_client):
     client,requests=make_client(workers=3,replanned_workers=2)
     key=start(client,approve_plan=False)

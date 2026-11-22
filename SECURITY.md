@@ -1,9 +1,13 @@
 # Security boundary
 
-This is a loopback-only, single-user educational app with no authentication or
-per-student ownership. Do not expose it publicly or use confidential classroom data.
-Live creation rejects non-loopback callers. Compose still binds the frontend to
-127.0.0.1; live use behind a proxy requires a future authenticated deployment design.
+This is a single-user educational app with no per-student ownership. By default,
+Live AI and administration require loopback access. The VPS can explicitly enable
+the authenticated HTTPS Nginx proxy using `AGENT_LAB_ADMIN_ORIGIN`. That proxy
+authenticates every request, overwrites forwarded headers and enforces same-origin
+writes; the API must remain bound to loopback. Live planning, Commander discussion,
+approvals and key updates share this access policy. This shared administrator
+sign-in does not provide separate classroom accounts or per-student isolation.
+Compose still binds the frontend to 127.0.0.1.
 
 Provider credentials remain in the backend environment or ignored local `.env`.
 They never enter model context, API responses, replay events or frontend bundles.

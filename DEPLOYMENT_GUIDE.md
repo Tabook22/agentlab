@@ -44,7 +44,8 @@ exports and API responses. On the VPS this directory is under persistent `data/`
 so it survives releases and overrides the service's initial empty environment key.
 
 The user service sets `AGENT_LAB_ADMIN_ORIGIN=https://nasserdiary.com` to allow
-the existing authenticated HTTPS Nginx proxy to submit admin key updates. Only
+the existing authenticated HTTPS Nginx proxy to submit admin key updates, request
+Commander plans, discuss and revise proposals, and approve Live AI execution. Only
 enable this option behind that proxy, with the API bound to loopback. The current
 shared HTTPS sign-in is the administrator sign-in; this app has no separate user roles.
 Cross-origin and non-form submissions are rejected. Key changes are blocked while

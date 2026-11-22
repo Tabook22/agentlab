@@ -96,3 +96,16 @@ def test_chat_is_local_only(chat_client):
         assert remote.get(f'/api/missions/{key}/master/chat').status_code==403
         assert send(remote,key).status_code==403
     assert requests==[]
+
+
+def test_chat_through_configured_authenticated_proxy(chat_client,monkeypatch):
+    client,key,requests,_=chat_client
+    monkeypatch.setenv('AGENT_LAB_ADMIN_ORIGIN','https://admin.example')
+    with TestClient(client.app,client=('203.0.113.7',5000),headers={
+        'host':'admin.example','x-forwarded-proto':'https',
+    }) as remote:
+        assert remote.get(f'/api/missions/{key}/master/chat').status_code==200
+        assert send(remote,key).status_code==403
+        remote.headers['origin']='https://admin.example'
+        assert send(remote,key).status_code==200
+        assert len(requests)==1
