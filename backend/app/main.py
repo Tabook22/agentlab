@@ -112,7 +112,7 @@ def create_app(url=None, delay=None, provider=None):
     @app.middleware('http')
     async def private_provider_settings(request,call_next):
         response=await call_next(request)
-        if request.url.path.startswith('/api/settings/provider'):
+        if request.url.path.startswith(('/api/settings/provider', '/api/studio')):
             response.headers['Cache-Control']='no-store'
         return response
     app.state.sessions = sessions
@@ -612,6 +612,8 @@ def create_app(url=None, delay=None, provider=None):
     app.include_router(answer_resources_router(runner,require,require_local))
     from .attachments import attachments_router
     app.include_router(attachments_router(runner,require_local))
+    from .studio import studio_router
+    app.include_router(studio_router(sessions))
     return app
 
 

@@ -209,3 +209,26 @@ backend was restarted to activate the new routes. Preview uses mocked data:
   No real provider requests or paid web searches were made for verification.
 - Final answers remain available while independent discovery runs. Provider/limit
   failures and search scheduling errors cannot change a completed mission to failed.
+
+## Practice studio verification
+
+- Frontend: 147 tests passed, including English/Arabic activity entry points,
+  experiment disclosure, safe chart labels and translated CSV repair messages.
+- Backend: 24 studio tests cover failed/revised human task contracts, exact
+  accepted handoffs, stale revisions, idempotent retries, controlled experiment
+  inputs and checks, reflection persistence, Decimal arithmetic, invalid and
+  duplicate CSV rows, zero/scientific notation, size limits, formula-safe CSV,
+  escaped SVG, exports, cache policy, restart persistence and proxy access.
+- The focused studio/provider-settings/master-chat run passed all 40 tests.
+  A broader backend run passed 207 tests with one existing simulation timeout;
+  rerunning the complete simulation suite passed all 21 tests.
+- Migration 0003 → 0004 was exercised against a database containing an existing
+  completed mission; its content remained unchanged.
+- TypeScript and the production build passed. The deployment-base Vite build
+  was also run directly with `--base=/agentlab/`.
+- The English browser walkthrough submitted a deliberately failing contract,
+  repaired it, verified the saved designer handoff, ran a one-versus-three-worker
+  comparison, saved a reflection, analyzed the sample and selected a chart bar
+  to inspect the exact source readings. All activities used an isolated local DB
+  and no provider key. The browser bridge timed out before final Arabic/mobile
+  visual checks; bilingual server-render checks passed.

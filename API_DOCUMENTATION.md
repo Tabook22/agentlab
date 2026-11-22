@@ -217,3 +217,35 @@ no created workers/tasks. Persists `mission.clarification_answered`, retains pri
 usage and resource policy, and starts another planning request. A duplicate question
 ID returns the current mission with `already_answered: true` without another call.
 Returns `{mission, resumed}`. Plan approval remains a separate operation.
+
+## Free Practice studio
+
+All `/api/studio` routes require local or configured authenticated-proxy access
+and return `Cache-Control: no-store`. They never invoke the AI provider or create
+a mission. Run Alembic through revision `0004` before starting an upgraded API.
+
+- `GET /api/studio/runs?kind=participation|experiment|project`: latest 50 saved
+  activity summaries; `GET /api/studio/runs/{id}` returns the complete record.
+- `POST /api/studio/participation`: `{request_id: UUID}` creates the library role.
+- `POST /api/studio/participation/{id}/submit`: `submission_id` (UUID),
+  `expected_revision`, `borrowing_rule` (`available_only|any_book`),
+  `after_borrow` and `after_return` (`available|borrowed`), `loan_days` (1–30),
+  and `explanation` (10–1500 characters). Classroom acceptance requires 1–14
+  days and all state-transition tests. Failed tests retain the attempted rules.
+  Acceptance creates a simulated designer handoff and completes the activity.
+- `POST /api/studio/experiments`: `request_id`, `variable`
+  (`team_size|criteria|input`), `prediction` (10–1200 characters). Saves both
+  executed deterministic workflows and their frozen inputs, checks and traces.
+- `POST /api/studio/experiments/{id}/reflect`: `expected_revision` and
+  `reflection` (10–1500 characters); preserves both experiment results.
+- `GET /api/studio/projects/sample.csv`: visibly synthetic energy example.
+- `POST /api/studio/projects`: `request_id`, and either `sample: true` or
+  `csv_text` plus optional `filename`. Returns normalized rows, decimal totals,
+  checks, source snapshot/hash and limitations; malformed data returns 422.
+- `GET /api/studio/projects/{id}/export/{format}`: `cleaned.csv`, `summary.csv`,
+  `chart.svg` or `report.txt`; downloads are generated from the saved snapshot.
+
+Creation request IDs and participation submission IDs make retries idempotent.
+Completed participation is immutable. Submissions/reflections reject stale
+revisions with 409; reopen the saved record before trying again. Run IDs belong
+to a single activity kind and cannot be reused across kinds.

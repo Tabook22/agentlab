@@ -131,3 +131,43 @@ and 180,000 per mission. Oversized inputs are rejected rather than silently
 truncated. These are attachment processing limits, not execution-cycle limits.
 Word paragraph/table/header/footer text is extracted; complex shapes, equations,
 footnotes, comments and revision history may require a PDF copy for full review.
+
+## Practice studio: participate, experiment, apply
+
+Open **Practice studio** in the sidebar, or **Put your learning into practice**
+in the Learning Center. All three activities work without an API key and make
+no model requests. They save separate learning records on the shared lab server;
+they do not change or approve Live AI missions and do not provide student accounts.
+
+1. **Join the team.** Become the requirements analyst for a library exercise.
+   Choose borrowing/return state rules and a loan duration, then explain your
+   decisions. The local engine executes the rules against a book: borrow, attempt
+   a second loan, return, and borrow again. Failed checks identify the behavior to
+   repair. Accepted rules and the original explanation are passed to a simulated
+   designer, which produces a flow using a template. The explanation is retained,
+   not semantically graded. Attempts and the exact accepted handoff remain saved.
+2. **Experiment lab.** Record a prediction, change one factor, and compare two
+   executed scripted workflows using the same frozen scores. Compare team size,
+   acceptance-criteria coverage, or a missing-value policy. Read the actual
+   operations, numerical checks and handoff payloads, then save an explanation.
+   A missing essential policy stops the relevant workflow for clarification.
+   These free comparisons teach workflow design; they are not live-model
+   performance benchmarks and cannot establish that one AI architecture is better.
+3. **Project studio.** Analyze the visibly synthetic campus-energy sample or
+   paste/open a UTF-8 CSV with `building,month,kwh` in that order. Up to 512 KB,
+   5,000 rows and 100 buildings are supported. Months use YYYY-MM; readings are
+   non-negative kWh values with at most three decimal places. Missing readings,
+   duplicate building-month pairs, inconsistent name capitalization and malformed
+   inputs are rejected without saving a partial result. Decimal arithmetic sums
+   readings and separately checks grouped totals and row counts. Select a chart
+   bar to inspect its original normalized readings. Uneven time coverage is flagged.
+   Download cleaned CSV, summary CSV, SVG chart and a text report with provenance,
+   checks and limitations. Exports use English headings and preserve source names.
+   Formula-like building names are prefixed with an apostrophe in CSV exports.
+
+Saved activities reopen after navigation, reload and server restart. Opening a
+record performs no new computation or model calls. The latest 50 records per
+activity appear in the picker. These records share the existing local or
+authenticated HTTPS administrator access policy; they are visible to others
+using that same shared sign-in. Energy checks verify arithmetic and input
+structure, not meter accuracy, energy efficiency or potential savings.

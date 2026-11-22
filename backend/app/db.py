@@ -60,6 +60,17 @@ class Event(Base):
     payload: Mapped[dict] = mapped_column(JSON)
 
 
+class StudioRun(Base):
+    __tablename__ = 'studio_runs'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    kind: Mapped[str] = mapped_column(String(30), index=True)
+    title: Mapped[str] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(30), default='ASSIGNED')
+    revision: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[str] = mapped_column(String(40), default=now)
+    data: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
 class Attachment(Base):
     __tablename__ = 'attachments'
     id: Mapped[str] = mapped_column(String(36),primary_key=True,default=uid)
