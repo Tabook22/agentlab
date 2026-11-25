@@ -1,3 +1,4 @@
+from account_helpers import sign_in_admin
 import os
 import stat
 import httpx
@@ -29,6 +30,7 @@ def configured_app(tmp_path,monkeypatch):
 def test_save_is_write_only_persistent_and_enables_voice_without_restart(configured_app,monkeypatch):
     app,path,calls=configured_app
     with TestClient(app) as client:
+        sign_in_admin(client)
         app.state.runner.provider.connected=True
         response=client.put('/api/settings/provider/key',json={'api_key':KEY},headers=HEADERS)
         assert response.status_code==200,response.text
@@ -51,11 +53,13 @@ def test_replacement_survives_app_restart_and_empty_service_environment(configur
     app,path,_=configured_app
     replacement='sk-'+('replacement_only_'*4)
     with TestClient(app) as client:
+        sign_in_admin(client)
         for value in [KEY,replacement]:
             assert client.put('/api/settings/provider/key',json={'api_key':value},headers=HEADERS).status_code==200
     monkeypatch.setenv('OPENAI_API_KEY','')
     restarted=create_app(str(app.state.sessions.kw['bind'].url))
     with TestClient(restarted) as client:
+        sign_in_admin(client)
         assert client.get('/api/settings/provider').json()['key_present']
         assert os.getenv('OPENAI_API_KEY')==replacement
         assert path.read_text().strip()==replacement
@@ -64,12 +68,14 @@ def test_replacement_survives_app_restart_and_empty_service_environment(configur
 def test_bad_inputs_never_echo_or_persist_credentials(configured_app,payload):
     app,path,_=configured_app
     with TestClient(app) as client:
+        sign_in_admin(client)
         result=client.put('/api/settings/provider/key',json=payload,headers=HEADERS)
         assert result.status_code==422 and KEY not in result.text and not path.exists()
 
 def test_cross_origin_oversized_and_malformed_submissions_are_rejected(configured_app):
     app,path,_=configured_app
     with TestClient(app) as client:
+        sign_in_admin(client)
         for headers in [{},{**HEADERS,'origin':'https://unrelated.example'}]:
             assert client.put('/api/settings/provider/key',json={'api_key':KEY},headers=headers).status_code==403
         assert client.put('/api/settings/provider/key',content='x'*2049,headers={**HEADERS,'content-type':'application/json'}).status_code==413
@@ -80,6 +86,7 @@ def test_remote_access_requires_explicit_authenticated_proxy_configuration(confi
     app,path,_=configured_app
     proxy_headers={**HEADERS,'origin':'https://admin.example','host':'admin.example','x-forwarded-proto':'https'}
     with TestClient(app,client=('203.0.113.7',4000)) as client:
+        sign_in_admin(client)
         assert client.put('/api/settings/provider/key',json={'api_key':KEY},headers=proxy_headers).status_code==403
         monkeypatch.setenv('AGENT_LAB_ADMIN_ORIGIN','https://admin.example')
         assert client.put('/api/settings/provider/key',json={'api_key':KEY},headers=proxy_headers).status_code==200
@@ -87,6 +94,7 @@ def test_remote_access_requires_explicit_authenticated_proxy_configuration(confi
 def test_replacement_resets_verification_and_failed_write_keeps_previous_key(configured_app,monkeypatch):
     app,path,_=configured_app
     with TestClient(app) as client:
+        sign_in_admin(client)
         assert client.put('/api/settings/provider/key',json={'api_key':KEY},headers=HEADERS).status_code==200
         def fail(*args):raise OSError('internal failure '+KEY)
         monkeypatch.setattr('app.provider_settings.save_key',fail)

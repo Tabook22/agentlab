@@ -10,12 +10,12 @@ from urllib.parse import urlsplit
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import delete, event, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import with_loader_criteria
 
-from .access import admin_access_allowed, require_admin as check_admin
+from .access import require_admin as check_admin
 from .db import User, LoginSession, Mission, Attachment, StudioRun, Agent, Task, Event
 
 workspace = ContextVar('workspace', default=None)
@@ -25,7 +25,7 @@ OWNED = (Mission, Attachment, StudioRun)
 
 def require_admin(request):
     if getattr(request.state, 'user', None) is None:
-        raise HTTPException(401, 'Set up or sign in to your administrator account first.')
+        raise HTTPException(401, 'Sign in as Nasser, the super admin, first.')
     check_admin(request)
 
 
@@ -56,6 +56,7 @@ def public_user(row):
 
 
 class Credentials(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     username: str = Field(min_length=3, max_length=80)
     password: str = Field(min_length=10, max_length=256)
 
@@ -66,6 +67,7 @@ class Login(BaseModel):
 
 
 class UserEdit(BaseModel):
+    model_config = ConfigDict(extra='forbid')
     username: str | None = Field(default=None, min_length=3, max_length=80)
     password: str | None = Field(default=None, min_length=10, max_length=256)
     active: bool | None = None
@@ -103,7 +105,7 @@ def install_accounts(app, sessions, runner):
         if not user or not user.active or user.deleted:
             return None, None
         target = db.get(User, saved.workspace_id)
-        if not target or target.deleted or (user.role != 'admin' and target.id != user.id):
+        if not target or target.deleted or (user.role != 'super_admin' and target.id != user.id):
             return None, None
         return user, saved
 
@@ -131,18 +133,17 @@ def install_accounts(app, sessions, runner):
             return await call_next(request)
         if request.method not in ('GET', 'HEAD', 'OPTIONS'):
             origin = request.headers.get('origin')
+            if request.headers.get('x-forwarded-proto') == 'https' and not origin:
+                return JSONResponse({'detail': 'Use the application from its HTTPS page.'}, status_code=403)
             # SameSite cookies plus origin validation also protect login/setup.
             if origin and urlsplit(origin).netloc != request.headers.get('host'):
                 return JSONResponse({'detail': 'Use this application from the same origin.'}, status_code=403)
         with sessions() as db:
-            configured = db.scalar(select(User.id).limit(1)) is not None
             user, saved = identify(request, db)
             request.state.user = user
             request.state.login_session = saved
             scope = saved.workspace_id if saved else None
-        if not configured and not admin_access_allowed(request) and not request.url.path.startswith('/api/auth/'):
-            return JSONResponse({'detail': 'Complete administrator setup locally first.'}, status_code=403)
-        if configured and not user and not request.url.path.startswith('/api/auth/'):
+        if not user and not request.url.path.startswith('/api/auth/'):
             return JSONResponse({'detail': 'Sign in to your workspace.'}, status_code=401)
         claimed_scope = request.headers.get('x-workspace-id') or request.query_params.get('workspace_id')
         if scope is not None and claimed_scope and claimed_scope != scope:
@@ -165,28 +166,13 @@ def install_accounts(app, sessions, runner):
         with sessions() as db:
             configured = db.scalar(select(User.id).limit(1)) is not None
             user, saved = identify(request, db)
-            return {'configured': configured, 'can_setup': not configured and admin_access_allowed(request),
+            return {'configured': configured, 'can_setup': False,
                     'user': public_user(user) if user else None,
                     'workspace': public_user(db.get(User, saved.workspace_id)) if saved else None}
 
     @router.post('/api/auth/setup')
-    def setup(body: Credentials, request: Request):
-        if not admin_access_allowed(request):
-            raise HTTPException(403, 'Create the first administrator locally or through the configured administrator proxy.')
-        with sessions() as db:
-            if db.scalar(select(User.id).limit(1)):
-                raise HTTPException(409, 'Administrator setup is already complete. Sign in.')
-            # Fixed id makes concurrent first-admin attempts mutually exclusive.
-            user = User(id='administrator', username=username(body.username), password_hash=hash_password(body.password), role='admin')
-            db.add(user)
-            try:
-                db.flush()
-                for model in OWNED:
-                    db.execute(update(model).where(model.owner_id.is_(None)).values(owner_id=user.id))
-                return issue(db, user, request)
-            except IntegrityError:
-                db.rollback()
-                raise HTTPException(409, 'Administrator setup is already complete.') from None
+    def setup():
+        raise HTTPException(403, 'Self-registration is disabled. Only Nasser, the super admin, can create user accounts and workspaces.')
 
     @router.post('/api/auth/login')
     def login(body: Login, request: Request):
@@ -231,6 +217,8 @@ def install_accounts(app, sessions, runner):
     @router.post('/api/admin/users', status_code=201)
     def create_user(body: Credentials, request: Request):
         require_admin(request)
+        if username(body.username) == 'nasser':
+            raise HTTPException(409, 'Nasser is the reserved super-admin account.')
         with sessions() as db:
             user = User(username=username(body.username), password_hash=hash_password(body.password))
             db.add(user)
@@ -268,7 +256,12 @@ def install_accounts(app, sessions, runner):
             if not user or user.deleted:
                 raise HTTPException(404, 'User not found.')
             if body.username is not None:
-                user.username = username(body.username)
+                value = username(body.username)
+                if user.role == 'super_admin' and value != 'nasser':
+                    raise HTTPException(409, 'The single super-admin username is nasser.')
+                if user.role != 'super_admin' and value == 'nasser':
+                    raise HTTPException(409, 'Nasser is reserved for the super admin.')
+                user.username = value
             if body.password is not None:
                 user.password_hash = hash_password(body.password)
             if body.active is not None:

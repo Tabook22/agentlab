@@ -1,3 +1,4 @@
+from account_helpers import sign_in_admin
 import json
 from uuid import uuid4
 import httpx
@@ -22,8 +23,9 @@ def chat_client(tmp_path,monkeypatch):
     app=create_app(f'sqlite:///{tmp_path / "chat.db"}',delay=0,provider=OpenAIProvider(httpx.MockTransport(respond)))
     Base.metadata.create_all(app.state.sessions.kw['bind'])
     with TestClient(app) as client:
+        sign_in_admin(client)
         with app.state.sessions() as db:
-            mission=Mission(prompt='Explain educational agents',scenario='concepts',mode='live',status='AWAITING_APPROVAL',output={'usage':{'calls':7,'estimated_cost_usd':.08}})
+            mission=Mission(owner_id='administrator',prompt='Explain educational agents',scenario='concepts',mode='live',status='AWAITING_APPROVAL',output={'usage':{'calls':7,'estimated_cost_usd':.08}})
             db.add(mission);db.commit();key=mission.id
             app.state.runner.emit(db,key,'mission.plan_approval_requested',{'summary':'Two workers have distinct research and editing roles.','worker_plan':{'tasks':[{'name':'Lumen','role':'Researcher'},{'name':'Quill','role':'Editor'}]}})
         yield client,key,requests,response_code
@@ -93,8 +95,8 @@ def test_invalid_questions_and_decisions_do_not_call_provider(chat_client):
 def test_chat_is_local_only(chat_client):
     client,key,requests,_=chat_client
     with TestClient(client.app,client=('203.0.113.1',5000)) as remote:
-        assert remote.get(f'/api/missions/{key}/master/chat').status_code==403
-        assert send(remote,key).status_code==403
+        assert remote.get(f'/api/missions/{key}/master/chat').status_code==401
+        assert send(remote,key).status_code==401
     assert requests==[]
 
 
@@ -104,6 +106,10 @@ def test_chat_through_configured_authenticated_proxy(chat_client,monkeypatch):
     with TestClient(client.app,client=('203.0.113.7',5000),headers={
         'host':'admin.example','x-forwarded-proto':'https',
     }) as remote:
+        remote.base_url="https://admin.example"
+        remote.headers["origin"]="https://admin.example"
+        sign_in_admin(remote)
+        del remote.headers["origin"]
         assert remote.get(f'/api/missions/{key}/master/chat').status_code==200
         assert send(remote,key).status_code==403
         remote.headers['origin']='https://admin.example'

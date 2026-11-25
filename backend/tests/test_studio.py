@@ -1,3 +1,4 @@
+from account_helpers import sign_in_admin
 from uuid import uuid4
 import pytest
 from fastapi.testclient import TestClient
@@ -16,6 +17,7 @@ def client(tmp_path, monkeypatch):
     monkeypatch.setattr(app.state.runner.provider, 'generate', forbidden)
     monkeypatch.setattr(app.state.runner.provider, 'research', forbidden)
     with TestClient(app) as opened:
+        sign_in_admin(opened)
         yield opened
 
 
@@ -58,8 +60,8 @@ def test_stale_invalid_and_remote_submissions_do_not_change_work(client):
     assert client.post(path, json=contract(explanation=' ' * 12)).status_code == 422
     assert client.post(path, json=contract(after_borrow='invented')).status_code == 422
     with TestClient(client.app, client=('203.0.113.7', 5000)) as remote:
-        assert remote.get('/api/studio/runs?kind=participation').status_code == 403
-        assert remote.post(path, json=contract()).status_code == 403
+        assert remote.get('/api/studio/runs?kind=participation').status_code == 401
+        assert remote.post(path, json=contract()).status_code == 401
     assert client.get(f'/api/studio/runs/{key}').json()['revision'] == 0
 
 
@@ -180,6 +182,8 @@ def test_saved_activities_survive_server_restart_and_all_routes_use_proxy_access
     with TestClient(restarted, client=('203.0.113.7', 5000), headers={
         'host': 'admin.example', 'x-forwarded-proto': 'https', 'origin': 'https://admin.example',
     }) as remote:
+        remote.base_url="https://admin.example"
+        sign_in_admin(remote)
         assert remote.get(f'/api/studio/runs/{run["id"]}').json() == run
         assert remote.get(f'/api/studio/projects/{run["id"]}/export/summary.csv').status_code == 200
         assert remote.post('/api/studio/projects', json=body).json() == run

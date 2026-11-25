@@ -1,3 +1,4 @@
+from account_helpers import sign_in_admin
 import io
 from zipfile import ZipFile
 import pytest
@@ -12,8 +13,9 @@ def exports(tmp_path):
     app=create_app(f'sqlite:///{tmp_path / "exports.db"}',delay=0)
     Base.metadata.create_all(app.state.sessions.kw['bind'])
     with TestClient(app) as client:
+        sign_in_admin(client)
         with app.state.sessions() as db:
-            mission=Mission(prompt='Design a useful sensor system',scenario='data',mode='live',status='COMPLETED');db.add(mission);db.commit();key=mission.id
+            mission=Mission(owner_id='administrator',prompt='Design a useful sensor system',scenario='data',mode='live',status='COMPLETED');db.add(mission);db.commit();key=mission.id
             app.state.runner.emit(db,key,'master.final_approved',{'summary':'All mission checks passed.'})
             app.state.runner.emit(db,key,'mission.completed',{'output':{'title':'Sensor study plan','content':'## Solution\nUse **two sensors**. [Study](https://example.org/study)\n\n| Item | Cost |\n| --- | --- |\n| Sensor | 20 |\n\n1. Pilot\n2. Validate','limitations':['Indicative costs need local quotes.'],'sources':[{'title':'Unsafe','url':'javascript:alert(1)'}]}})
         yield client,key

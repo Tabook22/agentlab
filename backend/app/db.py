@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timezone
 from uuid import uuid4
-from sqlalchemy import JSON, ForeignKey, String, Integer, Text, LargeBinary, UniqueConstraint, Boolean, create_engine
+from sqlalchemy import JSON, ForeignKey, String, Integer, Text, LargeBinary, UniqueConstraint, Boolean, CheckConstraint, Index, text, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 
@@ -19,6 +19,12 @@ class Base(DeclarativeBase):
 
 class User(Base):
     __tablename__ = 'users'
+    __table_args__ = (
+        CheckConstraint("role IN ('user', 'super_admin')", name='ck_user_role'),
+        CheckConstraint("role != 'super_admin' OR username = 'nasser'", name='ck_super_admin_name'),
+        Index('uq_single_super_admin', 'role', unique=True,
+              sqlite_where=text("role = 'super_admin'"), postgresql_where=text("role = 'super_admin'")),
+    )
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     username: Mapped[str] = mapped_column(String(80), unique=True)
     password_hash: Mapped[str] = mapped_column(Text)

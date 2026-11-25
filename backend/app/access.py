@@ -1,4 +1,4 @@
-"""Single-user access through loopback or the configured authenticated proxy."""
+"""Account-based access with one named super admin."""
 import os
 from fastapi import HTTPException, Request
 
@@ -20,11 +20,10 @@ def admin_access_allowed(request: Request):
 def require_admin(request: Request):
     user = getattr(request.state, 'user', None)
     if user is not None:
-        if user.role != 'admin':
-            raise HTTPException(403, 'Administrator privileges are required.')
+        if user.role != 'super_admin':
+            raise HTTPException(403, 'Only the super admin can manage accounts and workspaces.')
         return
-    if not admin_access_allowed(request):
-        raise HTTPException(403, 'Use this app locally or sign in through its configured HTTPS administrator proxy.')
+    raise HTTPException(401, 'Sign in with an administrator-issued account.')
 
 
 def require_user(request: Request):

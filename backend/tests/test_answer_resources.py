@@ -1,3 +1,4 @@
+from account_helpers import sign_in_admin
 import asyncio
 import time
 from dataclasses import replace
@@ -37,8 +38,9 @@ def resource_app(tmp_path,monkeypatch):
     provider=FakeProvider();app=create_app(f'sqlite:///{tmp_path / "resources.db"}',delay=0,provider=provider)
     Base.metadata.create_all(app.state.sessions.kw['bind'])
     with TestClient(app) as client:
+        sign_in_admin(client)
         with app.state.sessions() as db:
-            mission=Mission(prompt='Explain a public educational topic',mode='live',scenario='live',status='COMPLETED',output={'content':'Original approved answer.','usage':{'calls':5,'estimated_cost_usd':.01}});db.add(mission);db.commit();key=mission.id
+            mission=Mission(owner_id='administrator',prompt='Explain a public educational topic',mode='live',scenario='live',status='COMPLETED',output={'content':'Original approved answer.','usage':{'calls':5,'estimated_cost_usd':.01}});db.add(mission);db.commit();key=mission.id
             app.state.runner.emit(db,key,'mission.created',{'prompt':mission.prompt,'language':'en','find_resources':True,'limits':{'open_ended':False,'budget_usd':.2}})
             app.state.runner.emit(db,key,'master.final_approved',{})
             app.state.runner.emit(db,key,'mission.completed',{'output':{'title':'Original answer','content':'Original approved answer.'}})
@@ -116,7 +118,7 @@ def test_nonlocal_call_cannot_start_research(resource_app):
     async def remote():
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app,client=('203.0.113.7',1234)),base_url='http://test') as remote_client:
             return await remote_client.post(f'/api/missions/{key}/answer/resources/search')
-    assert asyncio.run(remote()).status_code==403
+    assert asyncio.run(remote()).status_code==401
     assert provider.queries==[]
 
 

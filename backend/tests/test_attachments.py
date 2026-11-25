@@ -1,3 +1,4 @@
+from account_helpers import sign_in_admin
 import asyncio
 import io
 import json
@@ -26,7 +27,9 @@ def uploads(tmp_path,monkeypatch):
         return httpx.Response(200,json={'status':'completed','usage':{'input_tokens':100,'output_tokens':100},'output':[{'type':'message','role':'assistant','content':[{'type':'output_text','text':json.dumps(result)}]}]})
     app=create_app(f'sqlite:///{tmp_path / "uploads.db"}',delay=0,provider=OpenAIProvider(httpx.MockTransport(respond)))
     Base.metadata.create_all(app.state.sessions.kw['bind'])
-    with TestClient(app) as client:yield client,requests,visual_calls,wrong_labels
+    with TestClient(app) as client:
+        sign_in_admin(client)
+        yield client,requests,visual_calls,wrong_labels
 
 def upload(client,name,data):return client.post('/api/attachments',params={'filename':name},content=data,headers={'X-Attachment-Upload':'mission-composer','Content-Type':'application/octet-stream'})
 def png():

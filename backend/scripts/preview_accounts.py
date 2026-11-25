@@ -1,7 +1,7 @@
 """Disposable, loopback-only account UI fixture. Never uses the real lab DB/key.
 
 Run from backend: python scripts/preview_accounts.py
-Open http://127.0.0.1:8026 and sign in as qa-teacher / preview-password-123.
+Open http://127.0.0.1:8026 and sign in as nasser / preview-password-123.
 These credentials belong only to a newly generated temporary fixture database.
 """
 import os
@@ -31,7 +31,7 @@ def no_provider(request):
 app = create_app(delay=0, provider=OpenAIProvider(httpx.MockTransport(no_provider)))
 Base.metadata.create_all(app.state.sessions.kw['bind'])
 with app.state.sessions() as db:
-    teacher = User(username='qa-teacher', password_hash=hash_password('preview-password-123'), role='admin')
+    teacher = User(username='nasser', password_hash=hash_password('preview-password-123'), role='super_admin')
     alice = User(username='qa-alice', password_hash=hash_password('preview-password-123'))
     bob = User(username='qa-bob', password_hash=hash_password('preview-password-123'))
     db.add_all([teacher, alice, bob]); db.flush()

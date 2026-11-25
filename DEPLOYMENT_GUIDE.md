@@ -53,19 +53,22 @@ Cross-origin and non-form submissions are rejected. Key changes are blocked whil
 a Live AI mission is active. After upgrading this service unit, install it into
 `~/.config/systemd/user/`, run `systemctl --user daemon-reload`, and restart the app.
 
-## Account setup after this update
+## Single-super-admin deployment
 
-The service's existing migration step upgrades the persistent database to revision
-`0005`. Sign in through the existing website gate, then create your application
-administrator username and password. Existing VPS records are assigned to this
-administrator when setup completes. Local development records are not uploaded.
-Use **Users & workspaces** to create student accounts and open their workspaces.
+Migration `0006` preserves the existing `nasser` account, password and workspace,
+and changes its role to `super_admin`. It creates no additional administrator.
+The database rejects a second super admin. Public account registration and the
+old `/api/auth/setup` operation are disabled; every data route requires sign-in.
 
-Keep the outer Nginx gate during initial administrator setup. Removing or changing
-that gate is a separate deployment change; application student credentials do not
-replace the existing browser-level credentials automatically. After setup, all
-application data endpoints require an application session even on loopback.
-The unauthenticated health endpoint remains available for deployment checks.
+Nasser signs in with his existing application credentials, then opens **Manage
+user workspaces**. Creating a workspace assigns a new ordinary user their username
+and password. Users can only sign in to the workspace Nasser already created.
+They cannot register, provision another workspace, or grant administrator rights.
+
+The existing outer Nginx website sign-in remains enabled. Application credentials
+and the outer gate are separate. Local development databases and credentials are
+not uploaded during deployment. The persistent VPS database is backed up before
+migration, and the health endpoint remains available for deployment checks.
 
 ## Ship changes
 

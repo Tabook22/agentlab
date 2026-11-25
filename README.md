@@ -43,45 +43,47 @@ never changes system environment settings. Normal production ASGI startup still
 prefers deployment environment variables. The settings endpoint returns only key
 presence, model, limits and whether a real call has succeeded; never credentials.
 
-## Administrator and student accounts
+## One super admin and assigned user workspaces
 
-Run `python -m alembic upgrade head` in `backend` before restarting the backend
-after updating. The first screen asks you to create your administrator username
-and password (at least 10 characters). Complete this initial setup locally or
-through the configured HTTPS administrator proxy. Existing missions, attachments
-and practice records are assigned to this administrator; students start empty.
+**Nasser (`nasser`) is the only super admin.** The existing account and its
+workspace are preserved. There is no public registration, administrator setup
+screen, or user-controlled workspace creation. No passwords are included in the
+repository.
 
-Open **Users & workspaces** to create student usernames and passwords, edit a
-username, assign a replacement password, disable/enable an account, or delete an
-account. Passwords are stored as salted scrypt hashes and cannot be displayed.
-Changing credentials revokes that user's existing sign-ins. Disabling or deleting
-an account also stops its running missions. Account deletion removes sign-in
-access and archives its records in the database; it does not erase saved work.
-The administrator cannot disable or delete their own account.
+Sign in with credentials issued by Nasser. Each user has one assigned private
+workspace containing their own missions, attachments, history and practice work.
+Signing in opens that existing workspace; it does not create another one.
 
-Use **Open workspace** beside a user to review their mission history and practice
-activities, guide their agents, edit saved mission history, or pause/cancel work.
-The sidebar always names the selected workspace and provides **Return to my
-workspace**. Work created while helping a student belongs to that student.
-Switching workspaces clears the displayed mission, composer, files and practice
-state. Stale tabs cannot submit work into a different workspace.
+Nasser uses **Manage user workspaces** to:
 
-Students sign in using the credentials you give them. Missions, event streams,
-files, exports and practice records are scoped on the server to the signed-in
-user. Students cannot manage accounts or change the shared provider key. The
-provider key and execution capacity remain shared: the app still runs one live
-mission at a time. Limit/budget increases remain administrator decisions.
+1. Select **Create a user workspace**, then assign a username and password.
+2. Give those credentials to the user securely.
+3. Open the user's workspace to review work, guide agents, or pause/cancel missions.
+4. Change assigned credentials, disable/enable access, or delete user access.
 
-Sessions last 12 hours and use HttpOnly, SameSite=Strict cookies (Secure under
-HTTPS). Use separate browser profiles or sign out between students on a shared
-computer. Before the first administrator is created, the previous local/proxy
-access policy remains available for existing installations; complete setup before
-sharing the app. After setup every data/API route requires account authentication.
+Only Nasser can do these actions. Users cannot create accounts, promote users,
+create additional workspaces, or access another user's records. The super-admin
+username is fixed to `nasser`; the account cannot be disabled or deleted. Database
+constraints prevent a second super admin. Migration `0006` upgrades the existing
+Nasser account without creating another account or changing its password.
 
-Default live model: `gpt-5.4-mini`. Default accounting rates are $0.75 input and
-$4.50 output per million tokens, checked against the official model documentation
-on 27 October 2026. Custom models require explicit server-side rates. See
-[LIVE_ORCHESTRATION.md](LIVE_ORCHESTRATION.md) for limitations and sources.
+Passwords are salted scrypt hashes and cannot be displayed after saving. Changing
+credentials revokes previous sign-ins. Disabling/deleting access stops running
+missions; deletion archives saved workspace records in the database. Administrators
+reviewing a deleted workspace return to their own workspace.
+
+The sidebar names the currently selected workspace and offers **Return to my
+workspace** when Nasser is helping a user. New work created there belongs to that
+user. Switching workspaces clears the displayed mission, files and practice state;
+stale tabs cannot submit into another selected workspace.
+
+Sessions use HttpOnly, SameSite=Strict cookies, Secure under HTTPS, and last 12
+hours. All application data endpoints require sign-in, including on loopback and
+before account provisioning. Fresh installations require operator provisioning;
+the web application cannot create a super admin. Use separate browser profiles or
+sign out between users on shared computers. The shared provider key and execution
+capacity remain unchanged: one live mission runs at a time, and extra allowance
+approvals are reserved for Nasser.
 
 ## Try it
 

@@ -1,3 +1,4 @@
+from account_helpers import sign_in_admin, provision_super_admin
 import asyncio
 import json
 import time
@@ -15,6 +16,7 @@ def client(tmp_path):
     engine = app.state.sessions.kw['bind']
     Base.metadata.create_all(engine)
     with TestClient(app) as client:
+        sign_in_admin(client)
         yield client
 
 
@@ -178,7 +180,7 @@ def test_history_rejects_active_changes_and_invalid_details(client):
     from app.db import Mission
     # A paused mission stays active and cannot be hidden from the admin.
     with client.app.state.sessions() as db:
-        mission=Mission(prompt='A paused test mission',scenario='weather',status='PAUSED')
+        mission=Mission(owner_id='administrator',prompt='A paused test mission',scenario='weather',status='PAUSED')
         db.add(mission);db.commit();key=mission.id
     assert client.patch(f'/api/missions/{key}',json={'title':'New name'}).status_code==409
     assert client.delete(f'/api/missions/{key}').status_code==409
@@ -257,12 +259,14 @@ def test_restart_marks_interrupted_missions_failed(tmp_path):
     from app.db import Mission
     app = create_app(f'sqlite:///{tmp_path / "restart.db"}', delay=0)
     Base.metadata.create_all(app.state.sessions.kw['bind'])
+    provision_super_admin(app)
     with app.state.sessions() as db:
-        mission = Mission(prompt='Interrupted mission', scenario='weather', status='RUNNING')
+        mission = Mission(owner_id='administrator',prompt='Interrupted mission', scenario='weather', status='RUNNING')
         db.add(mission)
         db.commit()
         key = mission.id
     with TestClient(app) as client:
+        sign_in_admin(client)
         assert client.get(f'/api/missions/{key}').json()['status'] == 'FAILED'
         assert client.get(f'/api/missions/{key}/events').json()[-1]['type'] == 'mission.failed'
 

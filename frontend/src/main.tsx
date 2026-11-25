@@ -54,7 +54,7 @@ async function api(path: string, options?: RequestInit) {
 const pretty = (s:string) => s.toLowerCase().replaceAll('_',' ');
 function App() {
   const {session:accountSession}=useAccount();
-  const isAdmin=accountSession.user?.role==='admin';
+  const isAdmin=accountSession.user?.role==='super_admin';
   const [page,setPage] = useState('lab');
   const [showComposer,setShowComposer]=useState(true);
   const [showMasterChat,setShowMasterChat]=useState(false);
@@ -218,11 +218,11 @@ function App() {
       <div className="sidebar-section">YOUR WORKSPACE</div>
       <nav>{[{id:'lab',icon:FlaskConical,label:t('Mission Control','مركز المهام')},{id:'history',icon:History,label:t('Mission history','سجل المهام')},{id:'learn',icon:BookOpen,label:t('Learning center','مركز التعلم')},{id:'practice',icon:Users,label:arabic?'استوديو التدريب':'Practice studio'}].map(n=><button key={n.id} aria-label={n.label} title={n.label} className={page===n.id?'nav active':'nav'} onClick={()=>setPage(n.id)}><n.icon size={19}/>{n.label}{page===n.id&&<span className="nav-dot"/>}</button>)}</nav>
       <div className="sidebar-note"><div className="note-icon"><Sparkles size={20}/></div><strong>A little curiosity.<br/>A lot to discover.</strong><p>Big ideas become clear when you can see them happen.</p><button onClick={()=>setPage('learn')}>Explore the basics <ArrowUpRight size={15}/></button></div>
-      <>{isAdmin&&<button className={page==='users'?'nav active':'nav'} onClick={()=>setPage('users')}><Users size={18}/>Users & workspaces</button>}</><button className={`nav settings ${page==='settings'?'active':''}`} onClick={()=>setPage('settings')}><Settings2 size={18}/>Lab settings</button>
+      <>{isAdmin&&<button className={page==='users'?'nav active':'nav'} onClick={()=>setPage('users')}><Users size={18}/>Manage user workspaces</button>}</><button className={`nav settings ${page==='settings'?'active':''}`} onClick={()=>setPage('settings')}><Settings2 size={18}/>Lab settings</button>
       <AccountControls/>
     </aside>
     <main>
-      <header className="topbar"><div className="breadcrumb">Workspace <ChevronRight size={14}/><strong>{page==='lab'?t('Mission Control','مركز المهام'):page==='history'?'Mission history':page==='learn'?'Learning center':page==='practice'?(arabic?'استوديو التدريب':'Practice studio'):'Lab settings'}</strong></div><div className="header-actions"><HelpButton topic="guide" label={arabic?'دليل المستخدم':'User guide'}/><span className="local-pill"><i/>{accountSession.workspace?.username}’s workspace</span><button className="icon-button" onClick={()=>setArabic(!arabic)} aria-label="Switch language"><Globe2 size={17}/><span>{arabic?'English':'Arabic'}</span></button><button className="icon-button" onClick={()=>setPresentation(!presentation)} aria-label="Toggle classroom view">{presentation?<X size={18}/>:<Maximize2 size={18}/>}</button></div></header>
+      <header className="topbar"><div className="breadcrumb">Workspace <ChevronRight size={14}/><strong>{page==='lab'?t('Mission Control','مركز المهام'):page==='history'?'Mission history':page==='learn'?'Learning center':page==='practice'?(arabic?'استوديو التدريب':'Practice studio'):page==='users'?'Manage user workspaces':'Lab settings'}</strong></div><div className="header-actions"><HelpButton topic="guide" label={arabic?'دليل المستخدم':'User guide'}/><span className="local-pill"><i/>{accountSession.workspace?.username}’s workspace</span><button className="icon-button" onClick={()=>setArabic(!arabic)} aria-label="Switch language"><Globe2 size={17}/><span>{arabic?'English':'Arabic'}</span></button><button className="icon-button" onClick={()=>setPresentation(!presentation)} aria-label="Toggle classroom view">{presentation?<X size={18}/>:<Maximize2 size={18}/>}</button></div></header>
       <div className="content">
       {error&&<div className="error" role="alert">{error}<button onClick={()=>setError('')} aria-label="Dismiss error"><X size={16}/></button></div>}
       {page==='lab'&&<MissionWorkspace stage={showComposer?'goal':view} navigation={<MissionJourney exists={!!mission} status={replay!==null?replayStatus:mission?.status||'READY'} view={showComposer?'goal':view} events={shown} replay={replay!==null} onNavigate={navigateJourney} onDiscuss={openMasterChat} onPause={()=>void control(mission.status==='PAUSED'?'resume':'pause')} onCancel={()=>void control('cancel')} onAdvanced={next=>{setShowComposer(false);if(next==='replay'){setView('theater');setReplay(0);setPlaying(true);}else setView(next);}}/>}>

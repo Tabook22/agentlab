@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from app.db import Base, User, LoginSession, Mission, Attachment, StudioRun
 from app.main import create_app
+from account_helpers import provision_super_admin, sign_in_admin
 
 PASSWORD = 'classroom-password-123'
 
@@ -23,9 +24,9 @@ def lab(tmp_path, monkeypatch):
 
 
 def setup_admin(admin):
-    response = admin.post('/api/auth/setup', json={'username': 'Teacher', 'password': PASSWORD})
-    assert response.status_code == 200, response.text
-    return response.json()['user']
+    user = provision_super_admin(admin.app)
+    sign_in_admin(admin)
+    return user
 
 
 def add_user(admin, name):
@@ -45,18 +46,23 @@ def test_first_admin_claims_legacy_records_and_setup_cannot_be_repeated(lab):
         old = Mission(prompt='Existing teacher mission', scenario='concepts', status='COMPLETED')
         db.add(old); db.commit(); key = old.id
     assert admin.get('/api/auth/session').json()['configured'] is False
+    assert admin.get('/api/auth/session').json()['can_setup'] is False
+    assert admin.get('/api/missions').status_code == 401
+    assert admin.post('/api/missions',json={'prompt':'Cannot create an unassigned workspace'}).status_code == 401
+    assert admin.post('/api/auth/setup',json={'username':'nasser','password':PASSWORD}).status_code == 403
     assert admin.post('/api/admin/users', json={'username':'bypass', 'password':PASSWORD}).status_code == 401
     teacher = setup_admin(admin)
-    assert teacher['username'] == 'teacher'
+    assert teacher['username'] == 'nasser'
+    assert teacher['role'] == 'super_admin'
     assert admin.get(f'/api/missions/{key}').json()['owner_id'] == teacher['id']
-    assert admin.post('/api/auth/setup', json={'username':'another', 'password':PASSWORD}).status_code == 409
+    assert admin.post('/api/auth/setup', json={'username':'another', 'password':PASSWORD}).status_code == 403
     cookie = admin.cookies.get('agent_lab_session')
     with app.state.sessions() as db:
         user = db.get(User, teacher['id'])
         assert PASSWORD not in user.password_hash
         saved = db.scalar(select(LoginSession))
         assert saved.token_hash != cookie
-    assert 'HttpOnly' in admin.post('/api/auth/login', json={'username':'teacher', 'password':PASSWORD}).headers['set-cookie']
+    assert 'HttpOnly' in admin.post('/api/auth/login', json={'username':'nasser', 'password':PASSWORD}).headers['set-cookie']
 
 
 def test_students_cannot_read_or_modify_other_work_or_admin_settings(lab):
@@ -70,6 +76,7 @@ def test_students_cannot_read_or_modify_other_work_or_admin_settings(lab):
         assert a.post(f'/api/admin/workspace/{bob["id"]}').status_code == 403
         assert a.put('/api/settings/provider/key', json={'api_key':'sk-'+'x'*30}).status_code == 403
         assert a.post('/api/admin/users', json={'username':'mallory','password':PASSWORD}).status_code == 403
+        assert a.post('/api/auth/setup',json={'username':'mallory','password':PASSWORD}).status_code == 403
         mission = a.post('/api/missions', json={'prompt':'Explain agents for my class','scenario':'concepts'}).json()
         assert mission['owner_id'] == alice['id']
         key = mission['id']
@@ -136,9 +143,9 @@ def test_credentials_disable_delete_expiry_and_logout_revoke_access(lab):
 
 def test_password_rules_duplicate_names_csrf_and_remote_login(lab):
     app, admin = lab
-    assert admin.post('/api/auth/setup',json={'username':'teacher','password':'short'}).status_code == 422
+    assert admin.post('/api/auth/setup',json={'username':'nasser','password':'short'}).status_code == 403
     with TestClient(app,client=('203.0.113.1',1234)) as remote:
-        assert remote.post('/api/auth/setup',json={'username':'teacher','password':PASSWORD}).status_code == 403
+        assert remote.post('/api/auth/setup',json={'username':'nasser','password':PASSWORD}).status_code == 403
     setup_admin(admin); add_user(admin,'alice')
     assert admin.post('/api/admin/users',json={'username':'ALICE','password':PASSWORD}).status_code == 409
     assert admin.post('/api/admin/users',json={'username':'a b','password':PASSWORD}).status_code == 422
@@ -150,7 +157,7 @@ def test_password_rules_duplicate_names_csrf_and_remote_login(lab):
     with TestClient(app) as attacker:
         for _ in range(10):
             assert attacker.post('/api/auth/login',json={'username':'unknown','password':'incorrect'}).status_code == 401
-        assert attacker.post('/api/auth/login',json={'username':'teacher','password':PASSWORD}).status_code == 429
+        assert attacker.post('/api/auth/login',json={'username':'nasser','password':PASSWORD}).status_code == 429
 
 
 def test_stale_workspace_tabs_cannot_create_or_read_in_new_workspace(lab):
@@ -196,3 +203,60 @@ def test_student_live_work_and_admin_help_keep_original_owner(lab, monkeypatch):
         assert student.post(f'/api/missions/{key}/retry?extend_cycles=true').status_code == 403
     finally:
         student.__exit__(None,None,None)
+
+
+def test_only_nasser_is_super_admin_and_roles_cannot_be_self_assigned(lab):
+    from sqlalchemy.exc import IntegrityError
+    app, admin = lab
+    nasser = setup_admin(admin)
+    alice = add_user(admin,'alice')
+    for role in ('admin','super_admin'):
+        assert admin.post('/api/admin/users',json={'username':'second-admin','password':PASSWORD,'role':role}).status_code == 422
+        assert admin.patch(f'/api/admin/users/{alice["id"]}',json={'role':role}).status_code == 422
+    assert admin.patch(f'/api/admin/users/{nasser["id"]}',json={'username':'other-admin'}).status_code == 409
+    assert admin.patch(f'/api/admin/users/{alice["id"]}',json={'username':'nasser'}).status_code == 409
+    assert admin.post('/api/admin/users',json={'username':'nasser','password':PASSWORD}).status_code == 409
+    with app.state.sessions() as db:
+        db.add(User(username='another-admin',role='super_admin',password_hash='fixture-only'))
+        with pytest.raises(IntegrityError):db.commit()
+        db.rollback()
+    assert len([u for u in admin.get('/api/admin/users').json() if u['role']=='super_admin']) == 1
+
+
+def test_migration_reuses_nassers_existing_account_and_workspace(tmp_path,monkeypatch):
+    from pathlib import Path
+    import sqlite3
+    from alembic import command
+    from alembic.config import Config
+    backend=Path(__file__).resolve().parents[1]
+    path=tmp_path/'migration.db'
+    monkeypatch.chdir(backend)
+    monkeypatch.setenv('DATABASE_URL','sqlite:///'+path.as_posix())
+    config=Config(str(backend/'alembic.ini'))
+    command.upgrade(config,'0005')
+    with sqlite3.connect(path) as db:
+        db.execute("INSERT INTO users VALUES ('existing-nasser','nasser','fixture-hash','admin',1,0,'original-date')")
+        db.execute("INSERT INTO missions (id,prompt,scenario,mode,status,created_at,output,owner_id) VALUES ('saved','Preserve this workspace','concepts','simulation','COMPLETED','original-date','{}','existing-nasser')")
+    command.upgrade(config,'head')
+    with sqlite3.connect(path) as db:
+        assert db.execute('SELECT id,username,role,created_at FROM users').fetchall()==[('existing-nasser','nasser','super_admin','original-date')]
+        assert db.execute('SELECT owner_id FROM missions').fetchone()[0]=='existing-nasser'
+        assert db.execute('PRAGMA foreign_key_check').fetchall()==[]
+
+
+def test_sign_in_only_opens_a_workspace_already_assigned_by_nasser(lab):
+    app, admin = lab
+    setup_admin(admin)
+    assigned = add_user(admin,'assigned-user')
+    with TestClient(app) as user:
+        assert user.post('/api/auth/login',json={'username':'unassigned-user','password':PASSWORD}).status_code == 401
+        sign_in(user,'assigned-user')
+        first=user.get('/api/auth/session').json()
+        assert first['workspace']['id']==assigned['id']
+        assert first['user']['role']=='user'
+        assert user.post('/api/admin/users',json={'username':'extra-workspace','password':PASSWORD}).status_code == 403
+        assert user.post('/api/auth/setup',json={'username':'extra-workspace','password':PASSWORD}).status_code == 403
+        sign_in(user,'assigned-user')
+        assert user.get('/api/auth/session').json()['workspace']['id']==assigned['id']
+    with app.state.sessions() as db:
+        assert len(list(db.scalars(select(User))))==2

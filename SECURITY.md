@@ -6,16 +6,20 @@ Secure under HTTPS. Sessions expire after 12 hours. Login failures are limited
 per client address in the application process (10 attempts per five minutes).
 Production proxy rate limits remain appropriate for multiple processes.
 
-Initial administrator setup requires loopback or the explicitly configured HTTPS
-administrator proxy (`AGENT_LAB_ADMIN_ORIGIN`). Before setup, legacy local/proxy
-access remains available for existing installations; create the administrator
-before sharing access. Once an account exists, every data/API route requires a
-valid, active account session, including loopback requests. Authentication and
-health endpoints are the only exceptions. Cross-origin writes are rejected.
-Keep the API bound to loopback behind an HTTPS proxy for remote use. Forwarded
-headers must be overwritten by the trusted proxy. An existing Nginx Basic Auth
-gate remains an additional gate; configuring per-student proxy access is a
-separate deployment decision. Compose still binds the frontend to 127.0.0.1.
+There is one named super admin: `nasser`. Public account registration and web
+administrator setup are disabled, even on loopback. Nasser alone creates ordinary
+user accounts and their assigned workspaces. Roles cannot be supplied through
+account creation/edit requests. Database constraints restrict roles to `user` and
+`super_admin`, reserve the super-admin name `nasser`, and allow at most one super
+admin. Nasser cannot be renamed, disabled or deleted through the API. Migration
+`0006` reuses the existing account identity and retains its password and records.
+
+Every data endpoint requires a valid active account session, even before initial
+operator provisioning and for loopback requests. Health and sign-in/session
+endpoints are the only exceptions. Cross-origin writes are rejected. Keep the API
+bound to loopback behind HTTPS with forwarded headers overwritten by the trusted
+proxy. The existing Nginx Basic Auth gate remains an additional access gate.
+No administrator password is stored in code, frontend assets, or documentation.
 
 Mission, attachment and studio ownership is enforced on ORM reads and assigned
 on insertion. Events, tasks and agents are also filtered through mission
@@ -29,7 +33,7 @@ also returns reviewing administrators to their own workspaces. Deletion removes
 credentials and archives the ownership identity and saved work in the database.
 Database administrators/backups can still access archived records.
 
-Only administrators manage accounts or update the shared provider key. Students
+Only Nasser, the super admin, manages accounts or updates the shared provider key. Students
 can use Live AI and manage their own missions; administrator approval is required
 for extra limit/budget allowances. Provider configuration and one-live-mission
 capacity are shared. There is no per-student billing allocation or hard provider

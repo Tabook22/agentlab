@@ -1,3 +1,4 @@
+from account_helpers import sign_in_admin
 import asyncio
 import json
 import time
@@ -98,7 +99,7 @@ def make_client(tmp_path,monkeypatch):
         provider=OpenAIProvider(transport)
         app=create_app(f'sqlite:///{tmp_path / f"live-{len(opened)}.db"}',delay=0,provider=provider)
         Base.metadata.create_all(app.state.sessions.kw['bind'])
-        client=TestClient(app);client.__enter__();opened.append(client)
+        client=TestClient(app);client.__enter__();opened.append(client);sign_in_admin(client)
         return client,requests
     yield make
     for client in opened:
@@ -164,6 +165,8 @@ def test_authenticated_proxy_can_plan_revise_and_approve(make_client,monkeypatch
     with TestClient(local.app,client=('203.0.113.7',5000),headers={
         'host':'admin.example','x-forwarded-proto':'https','origin':'https://admin.example',
     }) as remote:
+        remote.base_url="https://admin.example"
+        sign_in_admin(remote)
         key=start(remote,approve_plan=False)
         mission,report=wait_for_report(remote,key)
         assert mission['agents']==[] and len(requests)==1
@@ -179,19 +182,19 @@ def test_authenticated_proxy_can_plan_revise_and_approve(make_client,monkeypatch
 
 
 @pytest.mark.parametrize('configured,headers,read_status',[
-    (False,{'host':'admin.example','x-forwarded-proto':'https','origin':'https://admin.example'},403),
-    (True,{'host':'admin.example','x-forwarded-proto':'https'},200),
-    (True,{'host':'admin.example','x-forwarded-proto':'https','origin':'https://other.example'},200),
-    (True,{'host':'other.example','x-forwarded-proto':'https','origin':'https://admin.example'},403),
-    (True,{'host':'admin.example','x-forwarded-proto':'http','origin':'https://admin.example'},403),
-    (True,{},403),
+    (False,{'host':'admin.example','x-forwarded-proto':'https','origin':'https://admin.example'},401),
+    (True,{'host':'admin.example','x-forwarded-proto':'https'},401),
+    (True,{'host':'admin.example','x-forwarded-proto':'https','origin':'https://other.example'},401),
+    (True,{'host':'other.example','x-forwarded-proto':'https','origin':'https://admin.example'},401),
+    (True,{'host':'admin.example','x-forwarded-proto':'http','origin':'https://admin.example'},401),
+    (True,{},401),
 ])
 def test_remote_planning_rejects_untrusted_requests_without_model_calls(make_client,monkeypatch,configured,headers,read_status):
     local,requests=make_client()
     monkeypatch.setenv('AGENT_LAB_ADMIN_ORIGIN','https://admin.example' if configured else '')
     with TestClient(local.app,client=('203.0.113.7',5000),headers=headers) as remote:
         response=remote.post('/api/missions',json={'prompt':'Explain educational agents.','mode':'live'})
-        assert response.status_code==403,response.text
+        assert response.status_code in (401,403),response.text
         assert requests==[]
         listing=remote.get('/api/missions')
         assert listing.status_code==read_status
@@ -262,6 +265,7 @@ def test_pending_plan_survives_backend_restart_without_work_or_new_calls(make_cl
     _,report=wait_for_report(client,key)
     app=create_app(str(client.app.state.sessions.kw['bind'].url),delay=0,provider=client.app.state.runner.provider)
     with TestClient(app) as restarted:
+        sign_in_admin(restarted)
         saved=restarted.get(f'/api/missions/{key}').json()
         assert saved['status']=='AWAITING_APPROVAL' and saved['agents']==[]
         assert len(requests)==1
@@ -980,6 +984,7 @@ def test_waiting_limit_survives_restart_without_calls_or_failed_tasks(make_clien
     original=client.get(f'/api/missions/{key}/limits').json()['pending']
     app=create_app(str(client.app.state.sessions.kw['bind'].url),delay=0,provider=client.app.state.runner.provider)
     with TestClient(app) as restarted:
+        sign_in_admin(restarted)
         assert restarted.get(f'/api/missions/{key}').json()['status']=='AWAITING_LIMIT_APPROVAL'
         assert restarted.get(f'/api/missions/{key}/limits').json()['pending']['id']==original['id']
         assert len(requests)==count
@@ -1100,7 +1105,7 @@ def test_workspace_answer_is_saved_once_without_calls_and_reaches_resumed_worker
     endpoint=f"/api/missions/{key}/questions/{question['id']}/answer"
     count=len(requests)
     remote=TestClient(client.app,client=('203.0.113.10',5000))
-    assert remote.post(endpoint,json={'instruction':'Answer'}).status_code==403
+    assert remote.post(endpoint,json={'instruction':'Answer'}).status_code==401
     assert client.post(endpoint,json={'instruction':'   '}).status_code==422
     response=client.post(endpoint,json={'instruction':'The audience is first-year students.'})
     assert response.status_code==201,response.text
@@ -1131,7 +1136,7 @@ def test_master_clarifies_twice_before_team_plan_and_preserves_answers_through_d
     url1=f"/api/missions/{key}/clarifications/{q1['id']}/answer"
     assert client.post(url1,json={'answer':'   '}).status_code==422
     remote=TestClient(client.app,client=('203.0.113.10',5000))
-    assert remote.post(url1,json={'answer':'Data'}).status_code==403
+    assert remote.post(url1,json={'answer':'Data'}).status_code==401
     assert len(requests)==1
     response=client.post(url1,json={'answer':'Use scores 68, 75, 81, 92, 84.'})
     assert response.status_code==200,response.text
@@ -1181,6 +1186,7 @@ def test_pending_master_clarification_survives_reload_and_can_be_cancelled(make_
     restart_transport,restarted_calls=mock_transport()
     restarted=create_app(str(client.app.state.sessions.kw['bind'].url),delay=0,provider=OpenAIProvider(transport=restart_transport))
     with TestClient(restarted) as reopened:
+        sign_in_admin(reopened)
         assert reopened.get(f'/api/missions/{key}').json()['status']=='AWAITING_CLARIFICATION'
         assert reopened.get(f'/api/missions/{key}/events').json()[-1]['id']==question['id']
         assert not restarted_calls
