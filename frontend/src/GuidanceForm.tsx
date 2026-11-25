@@ -1,3 +1,4 @@
+import {accountFetch as fetch} from './accountFetch';
 import { apiBase } from './apiBase';
 import { HelpButton } from './Help';
 import { Translate } from './i18n';

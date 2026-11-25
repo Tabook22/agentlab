@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import select, update
 from .db import StudioRun, now
-from .access import require_admin
+from .access import require_user
 
 
 class StartActivity(BaseModel):
@@ -64,7 +64,7 @@ def studio_router(sessions):
 
     @router.get('/runs')
     def list_runs(request: Request, kind: Literal['participation', 'experiment', 'project']):
-        require_admin(request)
+        require_user(request)
         with sessions() as db:
             rows = db.scalars(select(StudioRun).where(StudioRun.kind == kind)
                               .order_by(StudioRun.created_at.desc(), StudioRun.id).limit(50))
@@ -72,13 +72,13 @@ def studio_router(sessions):
 
     @router.get('/runs/{key}')
     def read_run(key: str, request: Request):
-        require_admin(request)
+        require_user(request)
         with sessions() as db:
             return public_run(find_run(db, key))
 
     @router.post('/participation', status_code=201)
     def start_participation(body: StartActivity, request: Request):
-        require_admin(request)
+        require_user(request)
         with sessions() as db:
             existing = db.get(StudioRun, str(body.request_id))
             if existing:
@@ -92,7 +92,7 @@ def studio_router(sessions):
 
     @router.post('/participation/{key}/submit')
     def submit_contract(key: str, body: LibraryContract, request: Request):
-        require_admin(request)
+        require_user(request)
         if len(body.explanation.strip()) < 10:
             raise HTTPException(422, 'Explain your rules in at least ten visible characters.')
         with sessions() as db:

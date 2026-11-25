@@ -1,3 +1,4 @@
+import {accountFetch as fetch} from './accountFetch';
 import { apiBase } from './apiBase';
 import {useEffect,useRef,useState} from 'react';
 import {ArrowUpRight,BookOpen,Check,ChevronRight,MessageCircle,Send,ShieldCheck,Sparkles,X} from 'lucide-react';

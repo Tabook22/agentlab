@@ -11,7 +11,7 @@ from xml.sax.saxutils import escape
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, Field, model_validator
-from .access import require_admin
+from .access import require_user
 from .db import StudioRun
 from .studio import find_run, public_run
 
@@ -174,12 +174,12 @@ def project_router(sessions):
 
     @router.get('/projects/sample.csv')
     def sample(request: Request):
-        require_admin(request)
+        require_user(request)
         return Response(SAMPLE_CSV, media_type='text/csv', headers={'Content-Disposition': 'attachment; filename="sample-energy.csv"'})
 
     @router.post('/projects', status_code=201)
     def analyze(body: ProjectRequest, request: Request):
-        require_admin(request)
+        require_user(request)
         with sessions() as db:
             existing = db.get(StudioRun, str(body.request_id))
             if existing:
@@ -199,7 +199,7 @@ def project_router(sessions):
 
     @router.get('/projects/{key}/export/{format}')
     def export(key: str, format: Literal['cleaned.csv', 'summary.csv', 'chart.svg', 'report.txt'], request: Request):
-        require_admin(request)
+        require_user(request)
         with sessions() as db:
             row = find_run(db, key, 'project'); data = row.data
         if format == 'cleaned.csv':

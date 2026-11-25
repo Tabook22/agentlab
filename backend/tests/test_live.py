@@ -178,22 +178,25 @@ def test_authenticated_proxy_can_plan_revise_and_approve(make_client,monkeypatch
         assert finish(remote,key)['status']=='COMPLETED'
 
 
-@pytest.mark.parametrize('configured,headers',[
-    (False,{'host':'admin.example','x-forwarded-proto':'https','origin':'https://admin.example'}),
-    (True,{'host':'admin.example','x-forwarded-proto':'https'}),
-    (True,{'host':'admin.example','x-forwarded-proto':'https','origin':'https://other.example'}),
-    (True,{'host':'other.example','x-forwarded-proto':'https','origin':'https://admin.example'}),
-    (True,{'host':'admin.example','x-forwarded-proto':'http','origin':'https://admin.example'}),
-    (True,{}),
+@pytest.mark.parametrize('configured,headers,read_status',[
+    (False,{'host':'admin.example','x-forwarded-proto':'https','origin':'https://admin.example'},403),
+    (True,{'host':'admin.example','x-forwarded-proto':'https'},200),
+    (True,{'host':'admin.example','x-forwarded-proto':'https','origin':'https://other.example'},200),
+    (True,{'host':'other.example','x-forwarded-proto':'https','origin':'https://admin.example'},403),
+    (True,{'host':'admin.example','x-forwarded-proto':'http','origin':'https://admin.example'},403),
+    (True,{},403),
 ])
-def test_remote_planning_rejects_untrusted_requests_without_model_calls(make_client,monkeypatch,configured,headers):
+def test_remote_planning_rejects_untrusted_requests_without_model_calls(make_client,monkeypatch,configured,headers,read_status):
     local,requests=make_client()
     monkeypatch.setenv('AGENT_LAB_ADMIN_ORIGIN','https://admin.example' if configured else '')
     with TestClient(local.app,client=('203.0.113.7',5000),headers=headers) as remote:
         response=remote.post('/api/missions',json={'prompt':'Explain educational agents.','mode':'live'})
         assert response.status_code==403,response.text
         assert requests==[]
-        assert remote.get('/api/missions').json()==[]
+        listing=remote.get('/api/missions')
+        assert listing.status_code==read_status
+        if read_status==200:assert listing.json()==[]
+        assert local.get('/api/missions').json()==[]
 
 
 def test_revised_plan_requires_fresh_consent_and_preserves_feedback_and_usage(make_client):

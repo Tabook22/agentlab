@@ -7,7 +7,7 @@ from typing import Literal
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import update
-from .access import require_admin
+from .access import require_user
 from .db import StudioRun
 from .studio import find_run, public_run
 
@@ -84,7 +84,7 @@ def experiment_router(sessions):
 
     @router.post('/experiments', status_code=201)
     def compare(body: ExperimentRequest, request: Request):
-        require_admin(request)
+        require_user(request)
         if len(body.prediction.strip()) < 10:
             raise HTTPException(422, 'Write a prediction of at least ten visible characters.')
         with sessions() as db:
@@ -100,7 +100,7 @@ def experiment_router(sessions):
 
     @router.post('/experiments/{key}/reflect')
     def reflect(key: str, body: ReflectionRequest, request: Request):
-        require_admin(request)
+        require_user(request)
         if len(body.reflection.strip()) < 10:
             raise HTTPException(422, 'Write a reflection of at least ten visible characters.')
         with sessions() as db:

@@ -47,10 +47,25 @@ The user service sets `AGENT_LAB_ADMIN_ORIGIN=https://nasserdiary.com` to allow
 the existing authenticated HTTPS Nginx proxy to submit admin key updates, request
 Commander plans, discuss and revise proposals, and approve Live AI execution. Only
 enable this option behind that proxy, with the API bound to loopback. The current
-shared HTTPS sign-in is the administrator sign-in; this app has no separate user roles.
+shared HTTPS sign-in remains an outer access gate. The app now also has separate
+administrator and student accounts, with private workspaces.
 Cross-origin and non-form submissions are rejected. Key changes are blocked while
 a Live AI mission is active. After upgrading this service unit, install it into
 `~/.config/systemd/user/`, run `systemctl --user daemon-reload`, and restart the app.
+
+## Account setup after this update
+
+The service's existing migration step upgrades the persistent database to revision
+`0005`. Sign in through the existing website gate, then create your application
+administrator username and password. Existing VPS records are assigned to this
+administrator when setup completes. Local development records are not uploaded.
+Use **Users & workspaces** to create student accounts and open their workspaces.
+
+Keep the outer Nginx gate during initial administrator setup. Removing or changing
+that gate is a separate deployment change; application student credentials do not
+replace the existing browser-level credentials automatically. After setup, all
+application data endpoints require an application session even on loopback.
+The unauthenticated health endpoint remains available for deployment checks.
 
 ## Ship changes
 

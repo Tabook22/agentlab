@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timezone
 from uuid import uuid4
-from sqlalchemy import JSON, ForeignKey, String, Integer, Text, LargeBinary, UniqueConstraint, create_engine
+from sqlalchemy import JSON, ForeignKey, String, Integer, Text, LargeBinary, UniqueConstraint, Boolean, create_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, sessionmaker
 
 
@@ -17,8 +17,28 @@ class Base(DeclarativeBase):
     pass
 
 
+class User(Base):
+    __tablename__ = 'users'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    username: Mapped[str] = mapped_column(String(80), unique=True)
+    password_hash: Mapped[str] = mapped_column(Text)
+    role: Mapped[str] = mapped_column(String(20), default='user')
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    deleted: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[str] = mapped_column(String(40), default=now)
+
+
+class LoginSession(Base):
+    __tablename__ = 'login_sessions'
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    workspace_id: Mapped[str] = mapped_column(ForeignKey('users.id'))
+    expires_at: Mapped[int] = mapped_column(Integer)
+
+
 class Mission(Base):
     __tablename__ = 'missions'
+    owner_id: Mapped[str | None] = mapped_column(ForeignKey('users.id'), index=True, nullable=True)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     prompt: Mapped[str] = mapped_column(String(2000))
     scenario: Mapped[str] = mapped_column(String(30))
@@ -62,6 +82,7 @@ class Event(Base):
 
 class StudioRun(Base):
     __tablename__ = 'studio_runs'
+    owner_id: Mapped[str | None] = mapped_column(ForeignKey('users.id'), index=True, nullable=True)
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
     kind: Mapped[str] = mapped_column(String(30), index=True)
     title: Mapped[str] = mapped_column(String(200))
@@ -73,6 +94,7 @@ class StudioRun(Base):
 
 class Attachment(Base):
     __tablename__ = 'attachments'
+    owner_id: Mapped[str | None] = mapped_column(ForeignKey('users.id'), index=True, nullable=True)
     id: Mapped[str] = mapped_column(String(36),primary_key=True,default=uid)
     filename: Mapped[str] = mapped_column(String(200))
     media_type: Mapped[str] = mapped_column(String(100))

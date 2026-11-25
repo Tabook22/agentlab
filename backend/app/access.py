@@ -18,5 +18,16 @@ def admin_access_allowed(request: Request):
 
 
 def require_admin(request: Request):
+    user = getattr(request.state, 'user', None)
+    if user is not None:
+        if user.role != 'admin':
+            raise HTTPException(403, 'Administrator privileges are required.')
+        return
     if not admin_access_allowed(request):
         raise HTTPException(403, 'Use this app locally or sign in through its configured HTTPS administrator proxy.')
+
+
+def require_user(request: Request):
+    if getattr(request.state, 'user', None) is not None:
+        return
+    require_admin(request)

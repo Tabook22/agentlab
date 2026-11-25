@@ -43,6 +43,41 @@ never changes system environment settings. Normal production ASGI startup still
 prefers deployment environment variables. The settings endpoint returns only key
 presence, model, limits and whether a real call has succeeded; never credentials.
 
+## Administrator and student accounts
+
+Run `python -m alembic upgrade head` in `backend` before restarting the backend
+after updating. The first screen asks you to create your administrator username
+and password (at least 10 characters). Complete this initial setup locally or
+through the configured HTTPS administrator proxy. Existing missions, attachments
+and practice records are assigned to this administrator; students start empty.
+
+Open **Users & workspaces** to create student usernames and passwords, edit a
+username, assign a replacement password, disable/enable an account, or delete an
+account. Passwords are stored as salted scrypt hashes and cannot be displayed.
+Changing credentials revokes that user's existing sign-ins. Disabling or deleting
+an account also stops its running missions. Account deletion removes sign-in
+access and archives its records in the database; it does not erase saved work.
+The administrator cannot disable or delete their own account.
+
+Use **Open workspace** beside a user to review their mission history and practice
+activities, guide their agents, edit saved mission history, or pause/cancel work.
+The sidebar always names the selected workspace and provides **Return to my
+workspace**. Work created while helping a student belongs to that student.
+Switching workspaces clears the displayed mission, composer, files and practice
+state. Stale tabs cannot submit work into a different workspace.
+
+Students sign in using the credentials you give them. Missions, event streams,
+files, exports and practice records are scoped on the server to the signed-in
+user. Students cannot manage accounts or change the shared provider key. The
+provider key and execution capacity remain shared: the app still runs one live
+mission at a time. Limit/budget increases remain administrator decisions.
+
+Sessions last 12 hours and use HttpOnly, SameSite=Strict cookies (Secure under
+HTTPS). Use separate browser profiles or sign out between students on a shared
+computer. Before the first administrator is created, the previous local/proxy
+access policy remains available for existing installations; complete setup before
+sharing the app. After setup every data/API route requires account authentication.
+
 Default live model: `gpt-5.4-mini`. Default accounting rates are $0.75 input and
 $4.50 output per million tokens, checked against the official model documentation
 on 27 October 2026. Custom models require explicit server-side rates. See
@@ -81,7 +116,8 @@ teams are predefined. Live AI is a separate, clearly labeled mode.
 
 ## Limits and scope
 
-- Loopback-only single-user demo; no authentication or per-student isolation yet.
+- Private accounts and separate student workspaces; administration remains local
+  or behind the configured HTTPS proxy for initial setup.
 - One active live mission, 1–8 workers, default 3 cycles per worker (initial setup maximum 5; admin can approve more), 24 model calls,
   120,000 reported-token guard, 240-second mission timeout and 45-second requests.
 - Mission allowance defaults to $0.10; admin-approved increases stay below the configured ceiling (default $5.00). Request
@@ -94,7 +130,7 @@ teams are predefined. Live AI is a separate, clearly labeled mode.
   reasoning items are not requested for display or persisted.
 - Rubric review is model-assisted acceptance checking, **not external fact checking**.
 - Ready tasks currently run sequentially. Additional provider adapters, additional external
-  tools, parallel scheduling, full Arabic lessons, authentication and production
+  tools, parallel scheduling, full Arabic lessons and production
   deployment remain future work. Do not expose this local demo publicly.
 
 ## Verify
