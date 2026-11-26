@@ -107,7 +107,7 @@ def make_client(tmp_path,monkeypatch):
 
 
 def start(client,approve_plan=True,**kwargs):
-    response=client.post('/api/missions',json={'prompt':'Explain the assigned educational topic.','mode':'live','open_ended':False,**kwargs})
+    response=client.post('/api/missions',json={'prompt':'Explain the assigned educational topic.','mode':'live','execution_strategy':'legacy','open_ended':False,**kwargs})
     assert response.status_code==201,response.text
     key=response.json()['id']
     if approve_plan:
@@ -193,7 +193,7 @@ def test_remote_planning_rejects_untrusted_requests_without_model_calls(make_cli
     local,requests=make_client()
     monkeypatch.setenv('AGENT_LAB_ADMIN_ORIGIN','https://admin.example' if configured else '')
     with TestClient(local.app,client=('203.0.113.7',5000),headers=headers) as remote:
-        response=remote.post('/api/missions',json={'prompt':'Explain educational agents.','mode':'live'})
+        response=remote.post('/api/missions',json={'prompt':'Explain educational agents.','mode':'live','execution_strategy':'legacy'})
         assert response.status_code in (401,403),response.text
         assert requests==[]
         listing=remote.get('/api/missions')
@@ -295,7 +295,7 @@ def test_selected_language_reaches_all_agent_calls(make_client,language,expected
 
 def test_unsupported_language_is_rejected(make_client):
     client,_=make_client()
-    response=client.post('/api/missions',json={'prompt':'Explain DNS','mode':'live','language':'unsupported'})
+    response=client.post('/api/missions',json={'prompt':'Explain DNS','mode':'live','execution_strategy':'legacy','language':'unsupported'})
     assert response.status_code==422
 
 
@@ -378,7 +378,7 @@ def test_cancel_inflight_call_releases_mission_admission(make_client):
     client,_=make_client(delay=10)
     key=start(client)
     time.sleep(.04)
-    assert client.post('/api/missions',json={'prompt':'Another live mission','mode':'live'}).status_code==429
+    assert client.post('/api/missions',json={'prompt':'Another live mission','mode':'live','execution_strategy':'legacy'}).status_code==429
     assert client.post(f'/api/missions/{key}/cancel').status_code==200
     result=finish(client,key)
     assert result['status']=='CANCELLED'
@@ -812,7 +812,7 @@ def test_approval_enforces_ceiling_pending_id_and_current_limit(make_client):
     for amount in [.005,.01,.50]:
         assert client.post(f'/api/missions/{key}/budget/approve',json={'request_id':pending['id'],'new_limit_usd':amount}).status_code==422
     assert client.post(f'/api/missions/{key}/budget/approve',json={'request_id':'made-up','new_limit_usd':.20}).status_code==409
-    assert client.post('/api/missions',json={'prompt':'An educational mission','mode':'live','budget_usd':.50,'open_ended':False}).status_code==422
+    assert client.post('/api/missions',json={'prompt':'An educational mission','mode':'live','execution_strategy':'legacy','budget_usd':.50,'open_ended':False}).status_code==422
     assert requests==[]
 
 
@@ -1043,7 +1043,7 @@ def test_open_execution_has_no_resource_caps_but_retains_cost_accounting(make_cl
 
 def test_new_live_missions_are_open_by_default(make_client):
     client,_=make_client()
-    response=client.post('/api/missions',json={'prompt':'Explain a short educational topic.','mode':'live','budget_usd':.01})
+    response=client.post('/api/missions',json={'prompt':'Explain a short educational topic.','mode':'live','execution_strategy':'legacy','budget_usd':.01})
     key=response.json()['id'];_,report=wait_for_report(client,key)
     assert report['payload']['estimate']['open_ended'] is True
     assert client.post(f'/api/missions/{key}/plan/approve',json={'plan_id':report['id'],'total_budget_usd':.01}).status_code==200

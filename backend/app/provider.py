@@ -104,6 +104,8 @@ class RequestBudget:
         self.cost=0.0
         self.uncertain_requests=0
         self.web_search_calls=0
+        self.reserved_tokens=0
+        self.reserved_cost=0.0
 
     def reserve(self,payload,output_tokens,input_price,output_price,tool_cost=0.0,search_tokens=0):
         # A conservative byte-based bound includes schema/instruction overhead.
@@ -112,11 +114,13 @@ class RequestBudget:
         reserved_cost=(input_bound*input_price+output_tokens*output_price)/1_000_000+tool_cost
         if not self.open_ended and self.calls>=self.limits.max_calls:
             raise LimitReached('Mission model-call allowance reached. Waiting for admin approval.','calls',self.calls+1)
-        if not self.open_ended and self.tokens+reserved_tokens>self.limits.token_budget:
+        if not self.open_ended and self.tokens+self.reserved_tokens+reserved_tokens>self.limits.token_budget:
             raise LimitReached('Mission token allowance reached. Waiting for admin approval.','tokens',self.tokens+reserved_tokens)
-        if not self.open_ended and self.cost+reserved_cost>self.limit_usd:
+        if not self.open_ended and self.cost+self.reserved_cost+reserved_cost>self.limit_usd:
             raise SpendingApprovalRequired(self.limit_usd,self.cost+reserved_cost)
         self.calls+=1
+        self.reserved_tokens+=reserved_tokens
+        self.reserved_cost+=reserved_cost
         return reserved_tokens,reserved_cost
 
     def snapshot(self):
@@ -223,16 +227,28 @@ class OpenAIProvider:
         except (ValueError,TypeError):
             raise LiveError('The provider returned an invalid structured response. No output was accepted.') from None
         finally:
+            budget.reserved_tokens-=reserve_tokens
+            budget.reserved_cost=max(0.0,budget.reserved_cost-reserve_cost)
             if not charged:
                 budget.tokens+=reserve_tokens
                 budget.cost+=reserve_cost
                 budget.uncertain_requests+=1
 
     async def generate(self,schema,instructions,data,budget,output_tokens=1800,image_inputs=None):
+        def strict_schema(value):
+            if isinstance(value, list):
+                return [strict_schema(item) for item in value]
+            if not isinstance(value, dict):
+                return value
+            value = {key: strict_schema(item) for key, item in value.items() if key != 'default'}
+            if 'properties' in value:
+                value['required'] = list(value['properties'])
+                value['additionalProperties'] = False
+            return value
         payload={'model':self.model,'store':False,'instructions':instructions,
                  'input':json.dumps(data,ensure_ascii=False),'max_output_tokens':output_tokens,
                  'text':{'format':{'type':'json_schema','name':schema.__name__,
-                                  'strict':True,'schema':schema.model_json_schema()}}}
+                                  'strict':True,'schema':strict_schema(schema.model_json_schema())}}}
         if self.model.startswith('gpt-5.4-mini'):
             payload['reasoning']={'effort':'none'}
         if image_inputs:

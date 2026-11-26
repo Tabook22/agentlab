@@ -62,7 +62,7 @@ def test_images_require_explicit_reading_and_keep_usage(uploads):
     data=upload(client,'diagram.png',png()).json();identifier=data['id']
     assert data['status']=='needs_reading' and vision==[]
     assert client.get(f'/api/attachments/{identifier}/thumbnail').headers['content-type']=='image/png'
-    assert client.post('/api/missions',json={'prompt':'Explain this diagram.','mode':'live','attachment_ids':[identifier]}).status_code==409
+    assert client.post('/api/missions',json={'prompt':'Explain this diagram.','mode':'live','execution_strategy':'legacy','attachment_ids':[identifier]}).status_code==409
     assert client.post(f'/api/attachments/{identifier}/read',json={'comments':'   '}).status_code==422
     response=client.post(f'/api/attachments/{identifier}/read',json={'comments':'Explain the requirements and review process.'})
     assert response.status_code==200,response.text
@@ -84,7 +84,7 @@ def test_incomplete_visual_coverage_does_not_become_ready(uploads):
 def test_sources_reach_planning_workers_and_final_review_without_bypassing_approval(uploads):
     client,requests,vision,_=uploads
     source=upload(client,'requirements.txt',b'SENSOR_SOURCE_ABC: include a comparison table and explicit validation.').json()
-    created=client.post('/api/missions',json={'prompt':'Prepare a solution using the supplied requirements.','mode':'live','attachment_ids':[source['id']]})
+    created=client.post('/api/missions',json={'prompt':'Prepare a solution using the supplied requirements.','mode':'live','execution_strategy':'legacy','attachment_ids':[source['id']]})
     assert created.status_code==201,created.text
     key=created.json()['id'];mission,report=wait_for_report(client,key)
     assert mission['status']=='AWAITING_APPROVAL' and mission['agents']==[]

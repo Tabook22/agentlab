@@ -16,11 +16,11 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import with_loader_criteria
 
 from .access import require_admin as check_admin
-from .db import User, LoginSession, Mission, Attachment, StudioRun, Agent, Task, Event
+from .db import User, LoginSession, Mission, Attachment, StudioRun, Agent, Task, Event, Skill, SkillVersion, WorkflowRun, WorkflowStep
 
 workspace = ContextVar('workspace', default=None)
 COOKIE = 'agent_lab_session'
-OWNED = (Mission, Attachment, StudioRun)
+OWNED = (Mission, Attachment, StudioRun, Skill)
 
 
 def require_admin(request):
@@ -86,8 +86,10 @@ def install_accounts(app, sessions, runner):
         for model in OWNED:
             statement = statement.options(with_loader_criteria(model, model.owner_id == owner, include_aliases=True))
         mission_ids = select(Mission.id).where(Mission.owner_id == owner)
-        for model in (Agent, Task, Event):
+        for model in (Agent, Task, Event, WorkflowRun, WorkflowStep):
             statement = statement.options(with_loader_criteria(model, model.mission_id.in_(mission_ids), include_aliases=True))
+        skill_ids = select(Skill.id).where(Skill.owner_id == owner)
+        statement = statement.options(with_loader_criteria(SkillVersion, SkillVersion.skill_id.in_(skill_ids), include_aliases=True))
         state.statement = statement
 
     @event.listens_for(sessions, 'before_flush')

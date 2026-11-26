@@ -3,10 +3,11 @@
 Give AI a mission. Watch the agents come alive!
 
 A local educational application with **Live AI** and **Simulation** execution.
-In Live AI, an OpenAI-backed commander reads the actual mission, chooses **1–8
-workers**, explains why, and assigns task-specific roles, tools, acceptance criteria
-and dependencies. Each worker runs **observe → plan → act → test**, using feedback
-to repeat within a cycle limit. Workers submit drafts to the commander for acceptance or revision. The commander improves the combined answer and records explicit final approval only after whole-mission checks pass.
+The existing Master Agent selects reusable skills, plans dependent steps, and
+executes work directly by default. Independent steps can run concurrently;
+separate agents are reserved for isolation, independent review or different
+permissions. Review drafts before activating skills, retry failed steps using
+accepted results, and retain access to the original agent engine and history.
 
 ## Run locally (Python 3.12+, Node 20.19+)
 
@@ -32,6 +33,32 @@ uses port 5174). `/api` is proxied to the loopback backend on port 8010.
 The local launcher uses 8010 to avoid conflicting with other applications on 8000.
 For a custom port, set `AGENT_LAB_PORT` for the backend and set
 `AGENT_LAB_API_TARGET=http://127.0.0.1:<port>` in `frontend/.env.local`.
+
+## Skills-first Master Agent workflows
+
+New Live AI missions use **Master Agent & skills** by default. Open **Skills**
+to create/edit a versioned draft, import/export `SKILL.md`, and activate or
+deactivate it. Auto checks active descriptions before loading selected skill
+instructions. No match means the existing Master handles the work directly.
+
+Review the dependency plan, then choose **Approve steps & run**. Independent steps
+can run concurrently (limit 1–4); ordinary steps create no extra agents. Scoped
+agents use the existing executor only when isolation, independent review or a
+permission boundary warrants them. Failed steps can retry using accepted results.
+
+After completion, **Save as skill** creates a reusable draft for review. Previous
+skill versions remain identifiable in historical runs. Existing agent configurations
+and original classroom/live runs stay accessible; the original engine is available
+in **Execution settings**.
+
+For a no-cost demonstration, add and activate the two heritage example drafts in
+Skills, then choose **Try heritage workflow**. Two fictional Omani heritage excerpts
+are extracted in parallel and compared after both complete. A one-time failure
+option demonstrates retry without repeating the successful extraction.
+
+Install updated backend requirements and run `python -m alembic upgrade head`
+before restarting the API. See [SKILLS_WORKFLOWS.md](SKILLS_WORKFLOWS.md) for the
+workflow model, migration, API details, reproducible verification and sample skills.
 
 ## Configure the saved project key
 

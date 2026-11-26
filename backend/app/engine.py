@@ -1,6 +1,7 @@
 """Deterministic educational simulation. No LLM decisions or real weather claims."""
 import asyncio
 import os
+import threading
 from sqlalchemy import select, func
 from .db import Mission, Task, Agent, Event, now, uid
 from .schemas import AgentConfiguration, PlanItem, TaskPlan
@@ -33,16 +34,29 @@ class Orchestrator:
         self.provider = provider
         self.live_jobs = set()
         self.resource_jobs = {}
+        self.event_lock = threading.RLock()
 
     def emit(self, db, mission_id, kind, payload, agent_id=None, task_id=None):
-        seq = db.scalar(select(func.max(Event.sequence)).where(Event.mission_id == mission_id)) or 0
-        event = Event(mission_id=mission_id, sequence=seq + 1, type=kind,
-                      payload=payload, agent_id=agent_id, task_id=task_id)
-        db.add(event)
-        db.commit()  # Every visible action is durable before the stream reads it.
-        return event
+        with self.event_lock:
+            seq = db.scalar(select(func.max(Event.sequence)).where(Event.mission_id == mission_id)) or 0
+            event = Event(mission_id=mission_id, sequence=seq + 1, type=kind,
+                          payload=payload, agent_id=agent_id, task_id=task_id)
+            db.add(event)
+            db.commit()  # Every visible action is durable before the stream reads it.
+            return event
 
     def start(self, mission_id, mode='simulation', options=None):
+        if (options or {}).get('execution_strategy') == 'skills':
+            from .skill_workflow import run_workflow
+            if mode == 'live':
+                self.live_jobs.add(mission_id)
+            self.jobs[mission_id] = asyncio.create_task(run_workflow(self, mission_id, options))
+            def release_workflow(job):
+                if self.jobs.get(mission_id) is job:
+                    self.live_jobs.discard(mission_id)
+                    self.jobs.pop(mission_id, None)
+            self.jobs[mission_id].add_done_callback(release_workflow)
+            return
         if mode=='live':
             from .live import run_live
             self.live_jobs.add(mission_id)

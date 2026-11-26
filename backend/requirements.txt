@@ -11,3 +11,4 @@ reportlab>=4.4,<6
 arabic-reshaper>=3,<4
 python-bidi>=0.6,<1
 PyMuPDF>=1.26,<2
+PyYAML>=6.0,<7

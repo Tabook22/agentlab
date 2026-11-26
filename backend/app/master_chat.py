@@ -47,7 +47,7 @@ Do not claim access to account billing, private data or evidence outside the sup
 def chat_context(db,mission,events,selected):
     from .attachments import mission_sources
     public=[e for e in events if not e.type.startswith('master.chat.')]
-    important=[e for e in public if e.type in ('mission.clarification_requested','mission.clarification_answered','master.mission_understood','mission.plan_approval_requested','mission.plan_ready','mission.plan_approved','master.final_approved','mission.completed','mission.failed','agent.renamed') or e.type.startswith(('master.decision','master.review_completed','master.adjust','master.intervention'))]
+    important=[e for e in public if e.type in ('mission.clarification_requested','mission.clarification_answered','master.mission_understood','mission.plan_approval_requested','mission.plan_ready','mission.plan_approved','master.final_approved','mission.completed','mission.failed','agent.renamed') or e.type.startswith(('master.decision','master.review_completed','master.adjust','master.intervention','workflow.'))]
     chosen={e.sequence:e for e in important[-45:]+public[-25:]}
     # Include the selected decision even for a long mission, and always keep its plan.
     for kind in ('mission.plan_approval_requested','mission.plan_ready'):

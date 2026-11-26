@@ -49,6 +49,7 @@ class Mission(Base):
     prompt: Mapped[str] = mapped_column(String(2000))
     scenario: Mapped[str] = mapped_column(String(30))
     mode: Mapped[str] = mapped_column(String(20), default='simulation', server_default='simulation')
+    execution_strategy: Mapped[str] = mapped_column(String(20), default='legacy', server_default='legacy')
     status: Mapped[str] = mapped_column(String(30), default='CREATED')
     created_at: Mapped[str] = mapped_column(String(40), default=now)
     output: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -112,6 +113,65 @@ class Attachment(Base):
     details: Mapped[dict] = mapped_column(JSON,default=dict)
     data: Mapped[bytes] = mapped_column(LargeBinary)
     created_at: Mapped[str] = mapped_column(String(40),default=now)
+
+
+class Skill(Base):
+    __tablename__ = 'skills'
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    owner_id: Mapped[str] = mapped_column(ForeignKey('users.id'), index=True)
+    active_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    latest_version: Mapped[int] = mapped_column(Integer, default=1)
+    created_at: Mapped[str] = mapped_column(String(40), default=now)
+
+
+class SkillVersion(Base):
+    __tablename__ = 'skill_versions'
+    __table_args__ = (UniqueConstraint('skill_id', 'version'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    skill_id: Mapped[str] = mapped_column(ForeignKey('skills.id'), index=True)
+    version: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(120))
+    description: Mapped[str] = mapped_column(Text)
+    instructions: Mapped[str] = mapped_column(Text)
+    inputs: Mapped[list] = mapped_column(JSON, default=list)
+    outputs: Mapped[list] = mapped_column(JSON, default=list)
+    provenance: Mapped[dict] = mapped_column(JSON, default=dict)
+    created_at: Mapped[str] = mapped_column(String(40), default=now)
+
+
+class WorkflowRun(Base):
+    __tablename__ = 'workflow_runs'
+    mission_id: Mapped[str] = mapped_column(ForeignKey('missions.id'), primary_key=True)
+    config: Mapped[dict] = mapped_column(JSON, default=dict)
+    plan_revision: Mapped[int] = mapped_column(Integer, default=1)
+    selection: Mapped[dict] = mapped_column(JSON, default=dict)
+    suggestion: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class WorkflowStep(Base):
+    __tablename__ = 'workflow_steps'
+    __table_args__ = (UniqueConstraint('mission_id', 'position'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=uid)
+    mission_id: Mapped[str] = mapped_column(ForeignKey('missions.id'), index=True)
+    position: Mapped[int] = mapped_column(Integer)
+    title: Mapped[str] = mapped_column(String(200))
+    instructions: Mapped[str] = mapped_column(Text)
+    dependencies: Mapped[list] = mapped_column(JSON, default=list)
+    bindings: Mapped[list] = mapped_column(JSON, default=list)
+    skill_snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
+    executor: Mapped[str] = mapped_column(String(20), default='master')
+    delegation: Mapped[dict] = mapped_column(JSON, default=dict)
+    tools: Mapped[list] = mapped_column(JSON, default=lambda: ['write_text'])
+    expected_outputs: Mapped[list] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(30), default='WAITING')
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    inputs: Mapped[dict] = mapped_column(JSON, default=dict)
+    output: Mapped[dict] = mapped_column(JSON, default=dict)
+    failure: Mapped[dict] = mapped_column(JSON, default=dict)
+    agent_id: Mapped[str | None] = mapped_column(ForeignKey('agents.id'), nullable=True)
+    task_id: Mapped[str | None] = mapped_column(ForeignKey('tasks.id'), nullable=True)
+    started_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    completed_at: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
 
 def database(url=None):

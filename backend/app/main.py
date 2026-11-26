@@ -4,9 +4,10 @@ from contextlib import asynccontextmanager
 from typing import Literal
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, JsonValue
 from sqlalchemy import select, func
-from .db import database, Mission, Task, Agent, Event
+from .db import database, Mission, Task, Agent, Event, WorkflowRun
+from .workflow_schemas import WorkflowStepSpec, validate_graph
 from .worker_names import choose_worker_names, clean_worker_name, rename_report
 from .limit_approvals import WAITING,FIELDS,effective_options,pending_request,resume_options,hold_for_limit
 from .engine import Orchestrator
@@ -39,6 +40,13 @@ class BudgetDenialRequest(BaseModel):
 
 
 class MissionRequest(BaseModel):
+    execution_strategy: Literal['skills', 'legacy'] | None = None
+    skill_mode: Literal['auto', 'manual', 'direct'] = 'auto'
+    skill_id: str | None = None
+    inputs: dict[str, JsonValue] = Field(default_factory=dict)
+    workflow_steps: list[WorkflowStepSpec] = Field(default_factory=list, max_length=12)
+    concurrency_limit: int = Field(default=3, ge=1, le=4)
+    fail_once_steps: list[int] = Field(default_factory=list, max_length=12)
     find_resources: bool = False
     attachment_ids: list[str] = Field(default_factory=list,max_length=5)
     open_ended: bool = True
@@ -99,6 +107,11 @@ def create_app(url=None, delay=None, provider=None):
         with sessions() as db:
             for mission in db.scalars(select(Mission).where(Mission.status.in_(['CREATED', 'RUNNING', 'PAUSED']))):
                 mission.status = 'FAILED'
+                if mission.execution_strategy == 'skills':
+                    from .db import WorkflowStep
+                    for step in db.scalars(select(WorkflowStep).where(WorkflowStep.mission_id == mission.id, WorkflowStep.status == 'RUNNING')):
+                        step.status = 'FAILED'
+                        step.failure = {'kind': 'interrupted', 'message': 'Server restarted during this step. Completed prerequisite outputs are preserved.'}
                 runner.emit(db, mission.id, 'mission.failed', {'summary': 'Server restarted. Start a new simulation to try again.'})
             legacy=[(m.id,(m.output or {}).get('error','Limit reached.'),(m.output or {}).get('limit_info',{})) for m in db.scalars(select(Mission).where(Mission.status=='FAILED',Mission.mode=='live')) if (m.output or {}).get('stop_reason')=='limit_reached']
         for key,reason,info in legacy:
@@ -145,6 +158,17 @@ def create_app(url=None, delay=None, provider=None):
 
     @app.post('/api/missions', status_code=201)
     async def create(body: MissionRequest, request: Request):
+        strategy = body.execution_strategy or ('skills' if body.mode == 'live' or body.skill_id or body.workflow_steps else 'legacy')
+        if len(json.dumps(body.inputs)) > 100000:
+            raise HTTPException(422, 'Current mission inputs exceed 100 KB.')
+        if body.fail_once_steps and body.mode != 'simulation':
+            raise HTTPException(422, 'Simulated failures are available only in Simulation mode.')
+        if body.skill_mode == 'manual' and not body.skill_id:
+            raise HTTPException(422, 'Choose an active skill for manual selection.')
+        try:
+            validate_graph(body.workflow_steps)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from None
         if body.attachment_ids and body.mode!='live':raise HTTPException(422,'Attachments require Live AI; simulation cannot analyze your files.')
         if body.mode=='live':
             if not body.open_ended and body.budget_usd>runner.provider.limits.max_budget_usd:
@@ -157,20 +181,37 @@ def create_app(url=None, delay=None, provider=None):
         if len(runner.jobs) >= 4:
             raise HTTPException(429, 'Four missions are already active. Wait or cancel one.')
         with sessions() as db:
+            if strategy == 'skills' and body.skill_id:
+                from .skills import revision
+                revision(db, body.skill_id, active=True)
             from .attachments import selected_attachments,public_attachment
             sources=selected_attachments(db,body.attachment_ids)
-            mission = Mission(prompt=body.prompt.strip(), scenario='live' if body.mode=='live' else body.scenario,mode=body.mode)
+            mission = Mission(prompt=body.prompt.strip(), scenario='live' if body.mode=='live' else body.scenario,mode=body.mode, execution_strategy=strategy)
             if len(mission.prompt) < 5:
                 raise HTTPException(422, 'Please describe your mission.')
             db.add(mission)
             db.flush()
+            if strategy == 'skills':
+                from .attachments import mission_sources
+                inputs = dict(body.inputs)
+                inputs.setdefault('request', body.prompt.strip())
+                if sources:
+                    inputs['source_documents'] = [{'filename': source.filename, 'text': source.text,
+                        'source_reference': source.filename, 'details': source.details} for source in sources]
+                db.add(WorkflowRun(mission_id=mission.id, config={
+                    'selection_mode': body.skill_mode, 'skill_id': body.skill_id, 'inputs': inputs,
+                    'steps': [step.model_dump() for step in body.workflow_steps],
+                    'concurrency_limit': body.concurrency_limit, 'max_iterations': body.max_iterations,
+                    'language': body.language, 'budget_usd': body.budget_usd, 'open_ended': body.open_ended,
+                    'find_resources': body.find_resources,
+                    'fail_once_steps': body.fail_once_steps, 'approved': False}))
             runner.emit(db, mission.id, 'mission.created', {'summary': 'Live AI mission received.' if body.mode=='live' else 'Simulation mission received.',
-                'prompt': mission.prompt, 'scenario': mission.scenario,'mode':body.mode,'language':body.language,'find_resources':body.find_resources,
+                'prompt': mission.prompt, 'scenario': mission.scenario,'mode':body.mode,'execution_strategy':strategy,'language':body.language,'find_resources':body.find_resources,
                 'attachment_ids':body.attachment_ids,'attachments':[public_attachment(row,False) for row in sources],
                 'limits':{'max_workers':body.max_workers,'max_iterations':body.max_iterations,'budget_usd':body.budget_usd,'open_ended':body.open_ended} if body.mode=='live' else {}})
             result = serialize(mission)
             if sources:runner.emit(db,mission.id,'mission.attachments_received',{'summary':f'{len(sources)} source files prepared for the commander. Your comments define the task; file contents are supporting evidence.','attachments':[public_attachment(row,False) for row in sources]})
-        runner.start(mission.id,body.mode,{'max_workers':body.max_workers,'max_iterations':body.max_iterations,'budget_usd':body.budget_usd,'language':body.language,'open_ended':body.open_ended,'find_resources':body.find_resources})
+        runner.start(mission.id,body.mode,{'execution_strategy':strategy,'max_workers':body.max_workers,'max_iterations':body.max_iterations,'budget_usd':body.budget_usd,'language':body.language,'open_ended':body.open_ended,'find_resources':body.find_resources})
         return result
 
     @app.get('/api/missions')
@@ -393,6 +434,8 @@ def create_app(url=None, delay=None, provider=None):
         if not provider_status()['key_present']:raise HTTPException(400,'Configure the saved backend key before continuing.')
         with sessions() as db:
             mission=require(db,key)
+            if mission.execution_strategy == 'skills':
+                raise HTTPException(409, 'Use the saved workflow retry controls for skill-based missions.')
             if mission.mode!='live' or mission.status not in ('FAILED',WAITING,'PAUSED'):
                 raise HTTPException(409,'This mission is not waiting to continue. Refresh its current status.')
             if key in runner.jobs:raise HTTPException(409,'Wait for the current worker to pause before changing execution policy.')
@@ -569,6 +612,8 @@ def create_app(url=None, delay=None, provider=None):
             raise HTTPException(429,'Finish or cancel active work first.')
         with sessions() as db:
             mission=require(db,key)
+            if mission.execution_strategy == 'skills':
+                raise HTTPException(409, 'Use workflow/retry to retain skill versions and accepted step results.')
             if mission.mode!='live' or mission.status not in ('FAILED',WAITING):
                 raise HTTPException(409,'Only failed live missions can retry remaining work.')
             _,limit_events=effective_options(db,key,runner.provider.limits)
@@ -622,6 +667,10 @@ def create_app(url=None, delay=None, provider=None):
     app.include_router(attachments_router(runner,require_local))
     from .studio import studio_router
     app.include_router(studio_router(sessions))
+    from .skills import skills_router
+    app.include_router(skills_router(sessions))
+    from .skill_workflow import workflow_router
+    app.include_router(workflow_router(runner, require))
     return app
 
 

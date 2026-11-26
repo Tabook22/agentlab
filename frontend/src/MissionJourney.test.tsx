@@ -5,6 +5,14 @@ import {MissionJourney,suggestedJourneyView,journeyNextAction} from './MissionJo
 import type {LabEvent} from './events';
 const event=(sequence:number,type:string,payload:Record<string,any>={}):LabEvent=>({id:String(sequence),sequence,type,payload,timestamp:'2026-10-30'});
 const noop=()=>{};
+test('skills missions expose workflow steps and unlock the recorded workflow plan',()=>{
+ const html=renderToStaticMarkup(<MissionJourney skillsFirst exists status="AWAITING_APPROVAL" events={[event(1,'workflow.plan_ready')]} view="plan" replay={false} onNavigate={noop} onDiscuss={noop} onPause={noop} onCancel={noop} onAdvanced={noop}/>);
+ expect(html).toContain('Your workflow plan');
+ expect(html).toContain('Watch the workflow');
+ expect(html).toContain('Review the plan');
+ expect(html).not.toMatch(/disabled=""[^>]*class="journey-step step-1/);
+ expect(html).not.toContain('Your team');
+});
 function render(status:string,events:LabEvent[]=[],replay=false){return renderToStaticMarkup(<MissionJourney exists status={status} events={events} view="theater" replay={replay} onNavigate={noop} onDiscuss={noop} onPause={noop} onCancel={noop} onAdvanced={noop}/>);}
 test('mission shortcuts unlock from recorded plan and answer, not status alone',()=>{
  const html=render('COMPLETED');
